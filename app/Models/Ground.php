@@ -7,5 +7,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ground extends Model
 {
-    use HasFactory;
+    protected $guarded = ['id'];
 }
