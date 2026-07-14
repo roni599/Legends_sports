@@ -19,6 +19,17 @@ class BookingController extends Controller
             });
         }
         
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        if ($request->has('date')) {
+            $date = $request->date;
+            $query->whereHas('slots', function($q) use ($date) {
+                $q->whereDate('date', $date);
+            });
+        }
+        
         return $query->paginate(10);
     }
 
