@@ -31,7 +31,8 @@ class PricingRuleController extends Controller
             'type' => 'required|in:peak_hour,weekend,tournament',
             'start_time' => 'nullable|required_if:type,peak_hour|date_format:H:i',
             'end_time' => 'nullable|required_if:type,peak_hour|date_format:H:i',
-            'price_modifier' => 'required|numeric'
+            'price_modifier' => 'required|numeric',
+            'status' => 'required|in:active,inactive'
         ]);
 
         $rule = PricingRule::create($validated);
@@ -51,7 +52,8 @@ class PricingRuleController extends Controller
             'type' => 'required|in:peak_hour,weekend,tournament',
             'start_time' => 'nullable|required_if:type,peak_hour|date_format:H:i',
             'end_time' => 'nullable|required_if:type,peak_hour|date_format:H:i',
-            'price_modifier' => 'required|numeric'
+            'price_modifier' => 'required|numeric',
+            'status' => 'required|in:active,inactive'
         ]);
 
         $pricingRule->update($validated);

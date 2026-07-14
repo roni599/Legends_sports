@@ -25,7 +25,7 @@
             </select>
             <small class="text-danger" v-if="pricingStore.errors.ground_id">{{ pricingStore.errors.ground_id[0] }}</small>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label text-light">Type *</label>
             <select v-model="form.type" class="form-select custom-input" required>
               <option value="peak_hour">Peak Hour</option>
@@ -33,6 +33,14 @@
               <option value="tournament">Tournament</option>
             </select>
             <small class="text-danger" v-if="pricingStore.errors.type">{{ pricingStore.errors.type[0] }}</small>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-light">Status *</label>
+            <select v-model="form.status" class="form-select custom-input" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <small class="text-danger" v-if="pricingStore.errors.status">{{ pricingStore.errors.status[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Start Time</label>
@@ -79,7 +87,8 @@ const form = ref({
   type: 'peak_hour',
   start_time: '',
   end_time: '',
-  price_modifier: 0
+  price_modifier: 0,
+  status: 'active'
 });
 
 onMounted(async () => {
