@@ -1,0 +1,64 @@
+<template>
+  <div class="content-card">
+    <div class="content-header">
+      <h3 class="fs-5 m-0 text-light">Add New Ground</h3>
+      <router-link to="/grounds" class="btn btn-outline-light btn-sm">
+        Back to List
+      </router-link>
+    </div>
+    <div class="p-4">
+      <form @submit.prevent="saveGround">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label text-light">Ground Name *</label>
+            <input type="text" v-model="form.name" class="form-control custom-input" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-light">Status *</label>
+            <select v-model="form.status" class="form-select custom-input" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label text-light">Location</label>
+            <input type="text" v-model="form.location" class="form-control custom-input">
+          </div>
+          <div class="col-12">
+            <label class="form-label text-light">Description</label>
+            <textarea v-model="form.description" class="form-control custom-input" rows="3"></textarea>
+          </div>
+          <div class="col-12 mt-4">
+            <button type="submit" class="btn btn-primary px-4" :disabled="groundStore.loading">
+              {{ groundStore.loading ? 'Saving...' : 'Save Ground' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { useGroundStore } from '../../../store/grounds';
+import { useRouter } from 'vue-router';
+
+const groundStore = useGroundStore();
+const router = useRouter();
+
+const form = ref({
+  name: '',
+  location: '',
+  status: 'active',
+  description: ''
+});
+
+const saveGround = async () => {
+  const success = await groundStore.createGround(form.value);
+  if (success) {
+    router.push('/grounds');
+  }
+};
+</script>

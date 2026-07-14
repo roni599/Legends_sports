@@ -38,6 +38,21 @@ const routes = [
         path: 'clients/:id/edit',
         name: 'ClientEdit',
         component: () => import('./modules/clients/views/Edit.vue')
+      },
+      {
+        path: 'grounds',
+        name: 'GroundList',
+        component: () => import('./modules/grounds/views/List.vue')
+      },
+      {
+        path: 'grounds/create',
+        name: 'GroundCreate',
+        component: () => import('./modules/grounds/views/Create.vue')
+      },
+      {
+        path: 'grounds/:id/edit',
+        name: 'GroundEdit',
+        component: () => import('./modules/grounds/views/Edit.vue')
       }
     ]
   }
