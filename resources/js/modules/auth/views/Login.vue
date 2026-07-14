@@ -34,9 +34,12 @@ const password = ref('');
 const authStore = useAuthStore();
 const router = useRouter();
 
-const login = () => {
-  // Mock login for now
-  authStore.setAuthData({ id: 1, name: 'Admin', roles: ['super-admin'] }, 'fake-jwt-token');
-  router.push('/');
+const login = async () => {
+  try {
+    await authStore.login(email.value, password.value);
+    router.push('/');
+  } catch (error) {
+    alert('Invalid credentials or error logging in');
+  }
 };
 </script>
