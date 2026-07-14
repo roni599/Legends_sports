@@ -17,21 +17,23 @@
               <th>ID</th>
               <th>Name</th>
               <th>Location</th>
+              <th>Base Price (৳)</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="groundStore.loading">
-              <td colspan="5" class="text-center py-4">Loading grounds...</td>
+              <td colspan="6" class="text-center py-4">Loading grounds...</td>
             </tr>
             <tr v-else-if="groundStore.grounds.length === 0">
-              <td colspan="5" class="text-center py-4">No grounds found</td>
+              <td colspan="6" class="text-center py-4">No grounds found</td>
             </tr>
             <tr v-else v-for="ground in groundStore.grounds" :key="ground.id">
               <td>#{{ ground.id }}</td>
               <td>{{ ground.name }}</td>
               <td>{{ ground.location || '-' }}</td>
+              <td>{{ ground.base_price_per_hour }}</td>
               <td>
                 <span class="badge" :class="{
                   'bg-success': ground.status === 'active',
