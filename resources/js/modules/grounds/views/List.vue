@@ -52,7 +52,7 @@
         <span class="text-secondary small">Showing {{ groundStore.grounds.length }} entries of {{ groundStore.total }} entries</span>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="groundStore.page === 1" @click="changePage(groundStore.page - 1)">Previous</button>
-          <button class="btn btn-sm btn-outline-secondary" @click="changePage(groundStore.page + 1)">Next</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="groundStore.page * 10 >= groundStore.total" @click="changePage(groundStore.page + 1)">Next</button>
         </div>
       </div>
     </div>

@@ -59,7 +59,7 @@
         <span class="text-secondary small">Showing {{ clientStore.clients.length }} entries of {{ clientStore.total }} entries</span>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page === 1" @click="changePage(clientStore.page - 1)">Previous</button>
-          <button class="btn btn-sm btn-outline-secondary" @click="changePage(clientStore.page + 1)">Next</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page * 10 >= clientStore.total" @click="changePage(clientStore.page + 1)">Next</button>
         </div>
       </div>
     </div>

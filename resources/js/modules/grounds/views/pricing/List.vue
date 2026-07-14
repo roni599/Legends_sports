@@ -50,7 +50,7 @@
         <span class="text-secondary small">Showing {{ pricingStore.rules.length }} entries of {{ pricingStore.total }} entries</span>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="pricingStore.page === 1" @click="changePage(pricingStore.page - 1)">Previous</button>
-          <button class="btn btn-sm btn-outline-secondary" @click="changePage(pricingStore.page + 1)">Next</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="pricingStore.page * 10 >= pricingStore.total" @click="changePage(pricingStore.page + 1)">Next</button>
         </div>
       </div>
     </div>
