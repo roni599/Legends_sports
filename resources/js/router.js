@@ -53,6 +53,21 @@ const routes = [
         path: 'grounds/:id/edit',
         name: 'GroundEdit',
         component: () => import('./modules/grounds/views/Edit.vue')
+      },
+      {
+        path: 'grounds/pricing',
+        name: 'PricingRuleList',
+        component: () => import('./modules/grounds/views/pricing/List.vue')
+      },
+      {
+        path: 'grounds/pricing/create',
+        name: 'PricingRuleCreate',
+        component: () => import('./modules/grounds/views/pricing/Create.vue')
+      },
+      {
+        path: 'grounds/pricing/:id/edit',
+        name: 'PricingRuleEdit',
+        component: () => import('./modules/grounds/views/pricing/Edit.vue')
       }
     ]
   }

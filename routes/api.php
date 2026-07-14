@@ -14,4 +14,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('clients', App\Http\Controllers\ClientController::class);
     Route::apiResource('grounds', App\Http\Controllers\GroundController::class);
+    Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
 });
