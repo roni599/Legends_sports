@@ -78,6 +78,7 @@ const form = ref({
 });
 
 onMounted(() => {
+  pricingStore.errors = {};
   groundStore.fetchAllActiveGrounds(); // load all active grounds for dropdown
 });
 

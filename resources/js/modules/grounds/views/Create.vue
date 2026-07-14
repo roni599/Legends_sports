@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useGroundStore } from '../../../store/grounds';
 import { useRouter } from 'vue-router';
 
@@ -52,8 +52,12 @@ const router = useRouter();
 const form = ref({
   name: '',
   location: '',
-  status: 'active',
-  description: ''
+  description: '',
+  status: 'active'
+});
+
+onMounted(() => {
+  groundStore.errors = {};
 });
 
 const saveGround = async () => {

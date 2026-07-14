@@ -63,9 +63,11 @@ const form = ref({
 });
 
 onMounted(async () => {
+  groundStore.errors = {};
   groundStore.loading = true;
   try {
     const response = await axios.get(`/api/grounds/${route.params.id}`);
+    const ground = response.data;
     form.value = response.data;
   } catch (error) {
     console.error("Error loading ground details", error);

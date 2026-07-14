@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useClientStore } from '../../../store/clients';
 import { useRouter } from 'vue-router';
 
@@ -59,6 +59,10 @@ const form = ref({
   email: '',
   total_due: 0,
   address: ''
+});
+
+onMounted(() => {
+  clientStore.errors = {};
 });
 
 const saveClient = async () => {

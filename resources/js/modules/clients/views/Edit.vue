@@ -68,10 +68,12 @@ const form = ref({
 });
 
 onMounted(async () => {
+  clientStore.errors = {};
   clientStore.loading = true;
   try {
     const response = await axios.get(`/api/clients/${route.params.id}`);
-    form.value = response.data;
+    const client = response.data;
+    form.value = client;
   } catch (error) {
     console.error("Error loading client details", error);
     router.push('/clients');
