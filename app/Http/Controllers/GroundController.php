@@ -30,6 +30,7 @@ class GroundController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'location' => 'nullable|string',
+            'base_price_per_hour' => 'required|numeric|min:0',
             'status' => 'required|in:active,inactive,maintenance'
         ]);
 
@@ -48,6 +49,7 @@ class GroundController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'location' => 'nullable|string',
+            'base_price_per_hour' => 'required|numeric|min:0',
             'status' => 'required|in:active,inactive,maintenance'
         ]);
 

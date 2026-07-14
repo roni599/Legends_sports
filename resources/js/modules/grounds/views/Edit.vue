@@ -25,9 +25,15 @@
               <option value="maintenance">Maintenance</option>
             </select>
           </div>
-          <div class="col-12">
+          <div class="col-md-6">
+            <label class="form-label text-light">Base Price Per Hour (৳) *</label>
+            <input type="number" step="0.01" v-model="form.base_price_per_hour" class="form-control custom-input" required>
+            <small class="text-danger" v-if="groundStore.errors.base_price_per_hour">{{ groundStore.errors.base_price_per_hour[0] }}</small>
+          </div>
+          <div class="col-md-6">
             <label class="form-label text-light">Location</label>
             <input type="text" v-model="form.location" class="form-control custom-input">
+            <small class="text-danger" v-if="groundStore.errors.location">{{ groundStore.errors.location[0] }}</small>
           </div>
           <div class="col-12">
             <label class="form-label text-light">Description</label>
@@ -58,8 +64,9 @@ const form = ref({
   id: '',
   name: '',
   location: '',
-  status: 'active',
-  description: ''
+  description: '',
+  base_price_per_hour: 0,
+  status: 'active'
 });
 
 onMounted(async () => {
