@@ -12,11 +12,18 @@
       </div>
       <form v-else @submit.prevent="updateRule">
         <div class="row g-3">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label text-light">Rule Name *</label>
             <input type="text" v-model="form.name" class="form-control custom-input" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <label class="form-label text-light">Ground (Optional)</label>
+            <select v-model="form.ground_id" class="form-select custom-input">
+              <option :value="null">All Grounds</option>
+              <option v-for="ground in groundStore.grounds" :key="ground.id" :value="ground.id">{{ ground.name }}</option>
+            </select>
+          </div>
+          <div class="col-md-4">
             <label class="form-label text-light">Type *</label>
             <select v-model="form.type" class="form-select custom-input" required>
               <option value="peak_hour">Peak Hour</option>
@@ -50,16 +57,19 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { usePricingStore } from '../../../../store/pricing';
+import { useGroundStore } from '../../../../store/grounds';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 const pricingStore = usePricingStore();
+const groundStore = useGroundStore();
 const router = useRouter();
 const route = useRoute();
 
 const form = ref({
   id: '',
   name: '',
+  ground_id: null,
   type: 'peak_hour',
   start_time: '',
   end_time: '',
@@ -67,6 +77,7 @@ const form = ref({
 });
 
 onMounted(async () => {
+  groundStore.fetchGrounds(); // load grounds for dropdown
   pricingStore.loading = true;
   try {
     const response = await axios.get(`/api/pricing-rules/${route.params.id}`);
