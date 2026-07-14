@@ -10,4 +10,9 @@ class PricingRule extends Model
     use HasFactory;
 
     protected $guarded = ["id"];
+
+    public function ground()
+    {
+        return $this->belongsTo(Ground::class);
+    }
 }
