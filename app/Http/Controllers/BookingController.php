@@ -43,6 +43,14 @@ class BookingController extends Controller
             'exclude_booking_id' => 'nullable|exists:bookings,id'
         ]);
 
+        $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
+        if ($ground->status !== 'active') {
+            return response()->json([
+                'available' => false,
+                'message' => "This ground is currently not available for booking (Status: {$ground->status})."
+            ]);
+        }
+
         // Check if any slot overlaps with the requested time for the given ground
         $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
             $q->where('ground_id', $validated['ground_id'])
