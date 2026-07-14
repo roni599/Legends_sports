@@ -24,6 +24,15 @@ export const useGroundStore = defineStore('ground', {
         this.loading = false;
       }
     },
+
+    async fetchAllActiveGrounds() {
+      try {
+        const response = await axios.get('/api/grounds?all=true');
+        this.grounds = response.data;
+      } catch (error) {
+        console.error("Error fetching all grounds", error);
+      }
+    },
     
     async createGround(data) {
       this.loading = true;

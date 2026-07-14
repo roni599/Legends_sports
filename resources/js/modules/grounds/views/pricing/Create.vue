@@ -72,7 +72,7 @@ const form = ref({
 });
 
 onMounted(() => {
-  groundStore.fetchGrounds(); // load grounds for dropdown
+  groundStore.fetchAllActiveGrounds(); // load all active grounds for dropdown
 });
 
 const saveRule = async () => {

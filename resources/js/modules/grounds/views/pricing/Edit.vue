@@ -77,7 +77,7 @@ const form = ref({
 });
 
 onMounted(async () => {
-  groundStore.fetchGrounds(); // load grounds for dropdown
+  groundStore.fetchAllActiveGrounds(); // load all active grounds for dropdown
   pricingStore.loading = true;
   try {
     const response = await axios.get(`/api/pricing-rules/${route.params.id}`);
