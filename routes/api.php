@@ -11,4 +11,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user()->load('roles.permissions');
     });
+
+    Route::apiResource('clients', App\Http\Controllers\ClientController::class);
 });

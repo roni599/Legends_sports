@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Client;
+use Illuminate\Http\Request;
+
+class ClientController extends Controller
+{
+    public function index()
+    {
+        return Client::latest()->paginate(10);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|unique:clients,phone',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'total_due' => 'nullable|numeric'
+        ]);
+
+        $client = Client::create($validated);
+        return response()->json($client, 201);
+    }
+
+    public function show(Client $client)
+    {
+        return $client;
+    }
+
+    public function update(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|unique:clients,phone,' . $client->id,
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'total_due' => 'nullable|numeric'
+        ]);
+
+        $client->update($validated);
+        return response()->json($client);
+    }
+
+    public function destroy(Client $client)
+    {
+        $client->delete();
+        return response()->json(null, 204);
+    }
+}

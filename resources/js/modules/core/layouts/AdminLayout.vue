@@ -6,12 +6,49 @@
         <h1 class="sidebar-brand m-0 fs-5">LEGENDS ARENA</h1>
       </div>
       <nav class="sidebar-nav">
+        <!-- Dashboard -->
         <router-link to="/" class="nav-item-custom" active-class="active">
           Dashboard
         </router-link>
-        <a href="#" class="nav-item-custom">Bookings</a>
-        <a href="#" class="nav-item-custom">POS & Sales</a>
-        <a href="#" class="nav-item-custom">Clients</a>
+
+        <!-- Clients Module -->
+        <div class="nav-item-group" v-if="authStore.hasRole('super-admin') || authStore.hasRole('manager') || authStore.hasRole('booking-manager')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#clientMenu" role="button" aria-expanded="false" aria-controls="clientMenu">
+            Clients ▾
+          </a>
+          <div class="collapse" id="clientMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/clients" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client List</router-link>
+              <router-link to="/clients/create" class="nav-item-custom text-sm py-1" active-class="active">Add New Client</router-link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Module -->
+        <div class="nav-item-group" v-if="authStore.hasRole('super-admin') || authStore.hasRole('manager') || authStore.hasRole('booking-manager')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#bookingMenu" role="button" aria-expanded="false" aria-controls="bookingMenu">
+            Bookings ▾
+          </a>
+          <div class="collapse" id="bookingMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/bookings/calendar" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Calendar View</router-link>
+              <router-link to="/bookings" class="nav-item-custom text-sm py-1" active-class="active">Booking List</router-link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ground Module -->
+        <div class="nav-item-group" v-if="authStore.hasRole('super-admin')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#groundMenu" role="button" aria-expanded="false" aria-controls="groundMenu">
+            Ground Setup ▾
+          </a>
+          <div class="collapse" id="groundMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/grounds" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Ground List</router-link>
+              <router-link to="/grounds/pricing" class="nav-item-custom text-sm py-1" active-class="active">Pricing Rules</router-link>
+            </div>
+          </div>
+        </div>
       </nav>
     </aside>
 

@@ -4,6 +4,8 @@ import { useAuthStore } from './store/auth';
 import AdminLayout from './modules/core/layouts/AdminLayout.vue';
 import Login from './modules/auth/views/Login.vue';
 import Dashboard from './modules/dashboard/views/Index.vue';
+import ClientList from './modules/clients/views/List.vue';
+import ClientCreate from './modules/clients/views/Create.vue';
 
 const routes = [
   {
@@ -21,6 +23,16 @@ const routes = [
         path: '',
         name: 'Dashboard',
         component: Dashboard
+      },
+      {
+        path: 'clients',
+        name: 'ClientList',
+        component: ClientList
+      },
+      {
+        path: 'clients/create',
+        name: 'ClientCreate',
+        component: ClientCreate
       }
     ]
   }
