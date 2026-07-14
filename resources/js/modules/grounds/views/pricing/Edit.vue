@@ -34,14 +34,17 @@
           <div class="col-md-6">
             <label class="form-label text-light">Start Time</label>
             <input type="time" v-model="form.start_time" class="form-control custom-input">
+            <small class="text-danger" v-if="pricingStore.errors.start_time">{{ pricingStore.errors.start_time[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">End Time</label>
             <input type="time" v-model="form.end_time" class="form-control custom-input">
+            <small class="text-danger" v-if="pricingStore.errors.end_time">{{ pricingStore.errors.end_time[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Price Modifier (৳) *</label>
             <input type="number" step="0.01" v-model="form.price_modifier" class="form-control custom-input" required>
+            <small class="text-danger d-block" v-if="pricingStore.errors.price_modifier">{{ pricingStore.errors.price_modifier[0] }}</small>
           </div>
           <div class="col-12 mt-4">
             <button type="submit" class="btn btn-primary px-4" :disabled="pricingStore.loading">

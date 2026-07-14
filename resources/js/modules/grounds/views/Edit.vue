@@ -15,6 +15,7 @@
           <div class="col-md-6">
             <label class="form-label text-light">Ground Name *</label>
             <input type="text" v-model="form.name" class="form-control custom-input" required>
+            <small class="text-danger" v-if="groundStore.errors.name">{{ groundStore.errors.name[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Status *</label>
