@@ -33,6 +33,11 @@ const routes = [
         path: 'clients/create',
         name: 'ClientCreate',
         component: ClientCreate
+      },
+      {
+        path: 'clients/:id/edit',
+        name: 'ClientEdit',
+        component: () => import('./modules/clients/views/Edit.vue')
       }
     ]
   }

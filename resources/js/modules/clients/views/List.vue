@@ -33,8 +33,8 @@
               <td>{{ client.email || '-' }}</td>
               <td :class="{'text-danger fw-bold': client.total_due > 0}">{{ client.total_due }}</td>
               <td>
-                <button class="btn btn-sm btn-outline-info me-2">Edit</button>
-                <button class="btn btn-sm btn-outline-danger">Delete</button>
+                <router-link :to="`/clients/${client.id}/edit`" class="btn btn-sm btn-outline-info me-2">Edit</router-link>
+                <button @click="clientStore.deleteClient(client.id)" class="btn btn-sm btn-outline-danger">Delete</button>
               </td>
             </tr>
           </tbody>
