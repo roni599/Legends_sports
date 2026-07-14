@@ -7,5 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
-    use HasFactory;
+    protected $guarded = ['id'];
+
+    public function client() {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function supplier() {
+        return $this->belongsTo(Supplier::class);
+    }
 }

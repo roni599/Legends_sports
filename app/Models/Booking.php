@@ -7,5 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Booking extends Model
 {
-    use HasFactory;
+    protected $guarded = ['id'];
+
+    public function client() {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function ground() {
+        return $this->belongsTo(Ground::class);
+    }
+
+    public function slots() {
+        return $this->hasMany(BookingSlot::class);
+    }
+
+    public function invoice() {
+        return $this->hasOne(Invoice::class);
+    }
 }
