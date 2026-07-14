@@ -12,11 +12,41 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        // 1. Create Roles
+        $roles = [
+            ['name' => 'Super Admin', 'slug' => 'super-admin'],
+            ['name' => 'Manager', 'slug' => 'manager'],
+            ['name' => 'Booking Manager', 'slug' => 'booking-manager'],
+            ['name' => 'Staff', 'slug' => 'staff'],
+        ];
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        foreach ($roles as $role) {
+            \App\Models\Role::firstOrCreate(['slug' => $role['slug']], $role);
+        }
+
+        // 2. Create Super Admin User
+        $superAdmin = \App\Models\User::firstOrCreate(
+            ['email' => 'admin@legends.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('password123'),
+            ]
+        );
+
+        // Assign Super Admin Role
+        $superAdminRole = \App\Models\Role::where('slug', 'super-admin')->first();
+        if (!$superAdmin->roles->contains($superAdminRole->id)) {
+            $superAdmin->roles()->attach($superAdminRole->id);
+        }
+
+        // 3. Create Default Settings
+        $settings = [
+            ['key' => 'app_name', 'value' => 'Legends Multi Sports Arena', 'group' => 'general'],
+            ['key' => 'currency', 'value' => 'BDT', 'group' => 'general'],
+        ];
+
+        foreach ($settings as $setting) {
+            \App\Models\Setting::firstOrCreate(['key' => $setting['key']], $setting);
+        }
     }
 }
