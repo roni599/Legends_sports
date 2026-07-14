@@ -1,10 +1,13 @@
 <template>
   <div class="content-card">
-    <div class="content-header">
+    <div class="content-header d-flex justify-content-between align-items-center">
       <h3 class="fs-5 m-0 text-light">Client List</h3>
-      <router-link to="/clients/create" class="btn btn-primary btn-sm">
-        + Add New Client
-      </router-link>
+      <div class="d-flex gap-2">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search name or phone..." style="width: 200px;">
+        <router-link to="/clients/create" class="btn btn-primary btn-sm">
+          + Add New Client
+        </router-link>
+      </div>
     </div>
     <div class="p-4">
       <div class="table-responsive">
@@ -64,16 +67,25 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useClientStore } from '../../../store/clients';
 
 const clientStore = useClientStore();
+const searchQuery = ref('');
+let searchTimeout = null;
 
 onMounted(() => {
   clientStore.fetchClients();
 });
 
+const handleSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    clientStore.fetchClients(1, searchQuery.value);
+  }, 300);
+};
+
 const changePage = (page) => {
-  clientStore.fetchClients(page);
+  clientStore.fetchClients(page, searchQuery.value);
 };
 </script>

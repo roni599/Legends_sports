@@ -11,11 +11,12 @@ export const useClientStore = defineStore('client', {
   }),
   
   actions: {
-    async fetchClients(page = 1) {
+    async fetchClients(page = 1, search = '') {
       this.loading = true;
       this.page = page;
       try {
-        const response = await axios.get(`/api/clients?page=${page}`);
+        const url = search ? `/api/clients?page=${page}&search=${search}` : `/api/clients?page=${page}`;
+        const response = await axios.get(url);
         this.clients = response.data.data;
         this.total = response.data.total;
       } catch (error) {
