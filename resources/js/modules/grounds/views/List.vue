@@ -1,10 +1,13 @@
 <template>
   <div class="content-card">
-    <div class="content-header">
+    <div class="content-header d-flex justify-content-between align-items-center">
       <h3 class="fs-5 m-0 text-light">Ground List</h3>
-      <router-link to="/grounds/create" class="btn btn-primary btn-sm">
-        + Add New Ground
-      </router-link>
+      <div class="d-flex gap-2">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search name or location..." style="width: 220px;">
+        <router-link to="/grounds/create" class="btn btn-primary btn-sm">
+          + Add New Ground
+        </router-link>
+      </div>
     </div>
     <div class="p-4">
       <div class="table-responsive">
@@ -57,16 +60,25 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useGroundStore } from '../../../store/grounds';
 
 const groundStore = useGroundStore();
+const searchQuery = ref('');
+let searchTimeout = null;
 
 onMounted(() => {
   groundStore.fetchGrounds();
 });
 
+const handleSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    groundStore.fetchGrounds(1, searchQuery.value);
+  }, 300);
+};
+
 const changePage = (page) => {
-  groundStore.fetchGrounds(page);
+  groundStore.fetchGrounds(page, searchQuery.value);
 };
 </script>

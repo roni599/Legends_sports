@@ -11,11 +11,12 @@ export const usePricingStore = defineStore('pricing', {
   }),
   
   actions: {
-    async fetchRules(page = 1) {
+    async fetchRules(page = 1, search = '') {
       this.loading = true;
       this.page = page;
       try {
-        const response = await axios.get(`/api/pricing-rules?page=${page}`);
+        const url = search ? `/api/pricing-rules?page=${page}&search=${search}` : `/api/pricing-rules?page=${page}`;
+        const response = await axios.get(url);
         this.rules = response.data.data;
         this.total = response.data.total;
       } catch (error) {

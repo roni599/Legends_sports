@@ -12,7 +12,16 @@ class GroundController extends Controller
         if ($request->has('all')) {
             return Ground::where('status', 'active')->latest()->get();
         }
-        return Ground::latest()->paginate(10);
+        
+        $query = Ground::latest();
+        
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%");
+        }
+        
+        return $query->paginate(10);
     }
 
     public function store(Request $request)

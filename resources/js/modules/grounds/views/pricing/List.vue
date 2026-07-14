@@ -1,10 +1,13 @@
 <template>
   <div class="content-card">
-    <div class="content-header">
+    <div class="content-header d-flex justify-content-between align-items-center">
       <h3 class="fs-5 m-0 text-light">Pricing Rules List</h3>
-      <router-link to="/grounds/pricing/create" class="btn btn-primary btn-sm">
-        + Add New Rule
-      </router-link>
+      <div class="d-flex gap-2">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search rule, ground, type..." style="width: 240px;">
+        <router-link to="/grounds/pricing/create" class="btn btn-primary btn-sm">
+          + Add New Rule
+        </router-link>
+      </div>
     </div>
     <div class="p-4">
       <div class="table-responsive">
@@ -55,16 +58,25 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { usePricingStore } from '../../../../store/pricing';
 
 const pricingStore = usePricingStore();
+const searchQuery = ref('');
+let searchTimeout = null;
 
 onMounted(() => {
   pricingStore.fetchRules();
 });
 
+const handleSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    pricingStore.fetchRules(1, searchQuery.value);
+  }, 300);
+};
+
 const changePage = (page) => {
-  pricingStore.fetchRules(page);
+  pricingStore.fetchRules(page, searchQuery.value);
 };
 </script>

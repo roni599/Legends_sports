@@ -7,9 +7,20 @@ use Illuminate\Http\Request;
 
 class PricingRuleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return PricingRule::with('ground')->latest()->paginate(10);
+        $query = PricingRule::with('ground')->latest();
+        
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('type', 'like', "%{$search}%")
+                  ->orWhereHas('ground', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+        }
+        
+        return $query->paginate(10);
     }
 
     public function store(Request $request)

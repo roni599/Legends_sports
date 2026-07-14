@@ -11,11 +11,12 @@ export const useGroundStore = defineStore('ground', {
   }),
   
   actions: {
-    async fetchGrounds(page = 1) {
+    async fetchGrounds(page = 1, search = '') {
       this.loading = true;
       this.page = page;
       try {
-        const response = await axios.get(`/api/grounds?page=${page}`);
+        const url = search ? `/api/grounds?page=${page}&search=${search}` : `/api/grounds?page=${page}`;
+        const response = await axios.get(url);
         this.grounds = response.data.data;
         this.total = response.data.total;
       } catch (error) {
