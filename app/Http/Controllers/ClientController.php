@@ -30,6 +30,8 @@ class ClientController extends Controller
             'total_due' => 'nullable|numeric'
         ]);
 
+        $validated['total_due'] = $validated['total_due'] ?? 0;
+
         $client = Client::create($validated);
         return response()->json($client, 201);
     }
@@ -48,6 +50,8 @@ class ClientController extends Controller
             'address' => 'nullable|string',
             'total_due' => 'nullable|numeric'
         ]);
+
+        $validated['total_due'] = $validated['total_due'] ?? 0;
 
         $client->update($validated);
         return response()->json($client);
