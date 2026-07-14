@@ -12,6 +12,7 @@
           <div class="col-md-6">
             <label class="form-label text-light">Client Name *</label>
             <input type="text" v-model="form.name" class="form-control custom-input" required>
+            <small class="text-danger" v-if="clientStore.errors.name">{{ clientStore.errors.name[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Phone Number *</label>
@@ -21,14 +22,17 @@
           <div class="col-md-6">
             <label class="form-label text-light">Email Address</label>
             <input type="email" v-model="form.email" class="form-control custom-input">
+            <small class="text-danger" v-if="clientStore.errors.email">{{ clientStore.errors.email[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Opening Due Amount (৳)</label>
             <input type="number" v-model="form.total_due" class="form-control custom-input">
+            <small class="text-danger" v-if="clientStore.errors.total_due">{{ clientStore.errors.total_due[0] }}</small>
           </div>
           <div class="col-12">
             <label class="form-label text-light">Address</label>
             <textarea v-model="form.address" class="form-control custom-input" rows="3"></textarea>
+            <small class="text-danger" v-if="clientStore.errors.address">{{ clientStore.errors.address[0] }}</small>
           </div>
           <div class="col-12 mt-4">
             <button type="submit" class="btn btn-primary px-4" :disabled="clientStore.loading">

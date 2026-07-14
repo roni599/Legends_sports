@@ -15,6 +15,7 @@
           <div class="col-md-4">
             <label class="form-label text-light">Rule Name *</label>
             <input type="text" v-model="form.name" class="form-control custom-input" required>
+            <small class="text-danger" v-if="pricingStore.errors.name">{{ pricingStore.errors.name[0] }}</small>
           </div>
           <div class="col-md-4">
             <label class="form-label text-light">Ground (Optional)</label>
@@ -22,6 +23,7 @@
               <option :value="null">All Grounds</option>
               <option v-for="ground in groundStore.grounds" :key="ground.id" :value="ground.id">{{ ground.name }}</option>
             </select>
+            <small class="text-danger" v-if="pricingStore.errors.ground_id">{{ pricingStore.errors.ground_id[0] }}</small>
           </div>
           <div class="col-md-4">
             <label class="form-label text-light">Type *</label>
@@ -30,6 +32,7 @@
               <option value="weekend">Weekend</option>
               <option value="tournament">Tournament</option>
             </select>
+            <small class="text-danger" v-if="pricingStore.errors.type">{{ pricingStore.errors.type[0] }}</small>
           </div>
           <div class="col-md-6">
             <label class="form-label text-light">Start Time</label>
