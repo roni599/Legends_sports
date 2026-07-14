@@ -1,11 +1,11 @@
+/* Import Modular CSS */
+@import './modules/auth.css';
+@import './modules/admin.css';
+@import './modules/dashboard.css';
+
 /* Base Styles */
 body {
     font-family: 'Inter', sans-serif;
     background-color: #121212;
     color: #e0e0e0;
 }
-
-/* Import Modular CSS */
-@import './modules/auth.css';
-@import './modules/admin.css';
-@import './modules/dashboard.css';
