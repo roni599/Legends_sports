@@ -40,12 +40,17 @@ class BookingController extends Controller
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            'exclude_booking_id' => 'nullable|exists:bookings,id'
         ]);
 
         // Check if any slot overlaps with the requested time for the given ground
         $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
             $q->where('ground_id', $validated['ground_id'])
               ->whereIn('status', ['pending', 'confirmed', 'running']); // exclude cancelled
+            
+            if (isset($validated['exclude_booking_id'])) {
+                $q->where('id', '!=', $validated['exclude_booking_id']);
+            }
         })
         ->where('date', $validated['date'])
         ->where('start_time', '<', $validated['end_time'])
