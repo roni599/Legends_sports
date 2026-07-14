@@ -19,15 +19,16 @@
               <th>Type</th>
               <th>Time</th>
               <th>Modifier (৳)</th>
+              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="pricingStore.loading">
-              <td colspan="6" class="text-center py-4">Loading rules...</td>
+              <td colspan="7" class="text-center py-4">Loading rules...</td>
             </tr>
             <tr v-else-if="pricingStore.rules.length === 0">
-              <td colspan="6" class="text-center py-4">No rules found</td>
+              <td colspan="7" class="text-center py-4">No rules found</td>
             </tr>
             <tr v-else v-for="rule in pricingStore.rules" :key="rule.id">
               <td>#{{ rule.id }}</td>
@@ -37,6 +38,11 @@
               </td>
               <td>{{ rule.start_time || 'Any' }} - {{ rule.end_time || 'Any' }}</td>
               <td class="text-warning fw-bold">{{ rule.price_modifier > 0 ? '+' : '' }}{{ rule.price_modifier }}</td>
+              <td>
+                <span class="badge" :class="rule.status === 'active' ? 'bg-success' : 'bg-danger'">
+                  {{ rule.status.toUpperCase() }}
+                </span>
+              </td>
               <td>
                 <router-link :to="`/grounds/pricing/${rule.id}/edit`" class="btn btn-sm btn-outline-info me-2">Edit</router-link>
                 <button @click="pricingStore.deleteRule(rule.id)" class="btn btn-sm btn-outline-danger">Delete</button>
