@@ -7,15 +7,19 @@ export const usePricingStore = defineStore('pricing', {
     loading: false,
     errors: {},
     page: 1,
-    total: 0
+    total: 0,
+    searchQuery: ''
   }),
   
   actions: {
-    async fetchRules(page = 1, search = '') {
+    async fetchRules(page = 1, search = null) {
       this.loading = true;
       this.page = page;
+      if (search !== null) {
+          this.searchQuery = search;
+      }
       try {
-        const url = search ? `/api/pricing-rules?page=${page}&search=${search}` : `/api/pricing-rules?page=${page}`;
+        const url = this.searchQuery ? `/api/pricing-rules?page=${page}&search=${this.searchQuery}` : `/api/pricing-rules?page=${page}`;
         const response = await axios.get(url);
         this.rules = response.data.data;
         this.total = response.data.total;
@@ -64,7 +68,10 @@ export const usePricingStore = defineStore('pricing', {
       this.loading = true;
       try {
         await axios.delete(`/api/pricing-rules/${id}`);
-        await this.fetchRules(this.page);
+        if (this.rules.length === 1 && this.page > 1) {
+            this.page--;
+        }
+        await this.fetchRules(this.page, this.searchQuery);
         return true;
       } catch (error) {
         console.error("Error deleting pricing rule", error);

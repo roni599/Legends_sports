@@ -7,15 +7,19 @@ export const useClientStore = defineStore('client', {
     loading: false,
     errors: {},
     page: 1,
-    total: 0
+    total: 0,
+    searchQuery: ''
   }),
   
   actions: {
-    async fetchClients(page = 1, search = '') {
+    async fetchClients(page = 1, search = null) {
       this.loading = true;
       this.page = page;
+      if (search !== null) {
+          this.searchQuery = search;
+      }
       try {
-        const url = search ? `/api/clients?page=${page}&search=${search}` : `/api/clients?page=${page}`;
+        const url = this.searchQuery ? `/api/clients?page=${page}&search=${this.searchQuery}` : `/api/clients?page=${page}`;
         const response = await axios.get(url);
         this.clients = response.data.data;
         this.total = response.data.total;
@@ -64,7 +68,10 @@ export const useClientStore = defineStore('client', {
       this.loading = true;
       try {
         await axios.delete(`/api/clients/${id}`);
-        await this.fetchClients(this.page); // Refresh list
+        if (this.clients.length === 1 && this.page > 1) {
+            this.page--;
+        }
+        await this.fetchClients(this.page, this.searchQuery); // Refresh list with current search
         return true;
       } catch (error) {
         console.error("Error deleting client", error);

@@ -7,15 +7,19 @@ export const useGroundStore = defineStore('ground', {
     loading: false,
     errors: {},
     page: 1,
-    total: 0
+    total: 0,
+    searchQuery: ''
   }),
   
   actions: {
-    async fetchGrounds(page = 1, search = '') {
+    async fetchGrounds(page = 1, search = null) {
       this.loading = true;
       this.page = page;
+      if (search !== null) {
+          this.searchQuery = search;
+      }
       try {
-        const url = search ? `/api/grounds?page=${page}&search=${search}` : `/api/grounds?page=${page}`;
+        const url = this.searchQuery ? `/api/grounds?page=${page}&search=${this.searchQuery}` : `/api/grounds?page=${page}`;
         const response = await axios.get(url);
         this.grounds = response.data.data;
         this.total = response.data.total;
@@ -73,7 +77,10 @@ export const useGroundStore = defineStore('ground', {
       this.loading = true;
       try {
         await axios.delete(`/api/grounds/${id}`);
-        await this.fetchGrounds(this.page);
+        if (this.grounds.length === 1 && this.page > 1) {
+            this.page--;
+        }
+        await this.fetchGrounds(this.page, this.searchQuery);
         return true;
       } catch (error) {
         console.error("Error deleting ground", error);
