@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('pricing_rules', function (Blueprint $table) {
             $table->id();
+            $table->string('name'); // Weekend, Peak Hour
+            $table->foreignId('ground_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->enum('type', ['peak_hour', 'weekend', 'tournament']);
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
+            $table->decimal('price_modifier', 10, 2);
             $table->timestamps();
         });
     }

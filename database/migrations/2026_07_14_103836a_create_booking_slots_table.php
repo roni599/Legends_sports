@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('booking_slots', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
+            $table->date('date');
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->decimal('price', 10, 2);
+            $table->enum('status', ['blocked', 'booked'])->default('booked');
             $table->timestamps();
         });
     }

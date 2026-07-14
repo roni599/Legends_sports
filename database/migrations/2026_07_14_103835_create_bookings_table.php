@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('client_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('ground_id')->constrained()->cascadeOnDelete();
+            $table->decimal('total_amount', 10, 2);
+            $table->decimal('discount', 10, 2)->default(0);
+            $table->decimal('net_amount', 10, 2);
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->decimal('due_amount', 10, 2)->default(0);
+            $table->enum('status', ['pending', 'confirmed', 'running', 'completed', 'cancelled', 'no_show'])->default('pending');
             $table->timestamps();
         });
     }

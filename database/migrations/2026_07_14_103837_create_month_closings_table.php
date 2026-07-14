@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('month_closings', function (Blueprint $table) {
             $table->id();
+            $table->date('closing_month');
+            $table->decimal('total_revenue', 15, 2);
+            $table->decimal('total_expense', 15, 2);
+            $table->decimal('net_profit', 15, 2);
+            $table->boolean('is_locked')->default(true);
+            $table->foreignId('locked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

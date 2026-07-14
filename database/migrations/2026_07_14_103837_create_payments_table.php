@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('client_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('invoice_id')->nullable()->constrained()->nullOnDelete();
+            $table->decimal('amount', 10, 2);
+            $table->enum('type', ['in', 'out']);
+            $table->string('payment_method'); // cash, bkash, bank
+            $table->string('transaction_id')->nullable();
             $table->timestamps();
         });
     }
