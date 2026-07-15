@@ -201,6 +201,13 @@ class BookingController extends Controller
         $discount = $validated['discount'] ?? 0;
         $netAmount = max(0, $totalAmount - $discount);
         $paidAmount = $validated['paid_amount'] ?? 0;
+        
+        if ($paidAmount > $netAmount) {
+            return response()->json([
+                'errors' => ['paid_amount' => ['Paid amount (৳' . $paidAmount . ') cannot exceed the net amount (৳' . $netAmount . ').']]
+            ], 422);
+        }
+        
         $dueAmount = $netAmount - $paidAmount;
         
         $status = $paidAmount > 0 ? 'confirmed' : 'pending';
