@@ -95,9 +95,11 @@ class ClientController extends Controller
         }
 
         DB::transaction(function () use ($client, $validated) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+            
             // Create Payment record
             \App\Models\Payment::create([
-                'client_id' => $client->id,
+                'client_id' => $lockedClient->id,
                 'amount' => $validated['amount'],
                 'type' => 'in',
                 'payment_method' => $validated['payment_method'],
@@ -105,8 +107,8 @@ class ClientController extends Controller
             ]);
 
             // Reduce total_due
-            $client->total_due -= $validated['amount'];
-            $client->save();
+            $lockedClient->total_due -= $validated['amount'];
+            $lockedClient->save();
         });
 
         return response()->json(['message' => 'Due payment received successfully.', 'client' => $client]);

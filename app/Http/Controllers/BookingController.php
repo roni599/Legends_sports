@@ -348,20 +348,22 @@ class BookingController extends Controller
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $booking) {
-            if ($booking->status === 'cancelled') {
+            $lockedBooking = \App\Models\Booking::lockForUpdate()->find($booking->id);
+            
+            if ($lockedBooking->status === 'cancelled') {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'status' => ['A cancelled booking cannot be modified or restored. Please create a new booking.']
                 ]);
             }
             
-            $client = \App\Models\Client::find($booking->client_id);
+            $client = \App\Models\Client::lockForUpdate()->find($lockedBooking->client_id);
             $statusChangedToCancelled = isset($validated['status']) && 
                                         $validated['status'] === 'cancelled' && 
-                                        $booking->status !== 'cancelled';
+                                        $lockedBooking->status !== 'cancelled';
 
             // 1. Handle Cancellation and Refund
             if ($statusChangedToCancelled) {
-                if (in_array($booking->status, ['running', 'completed'])) {
+                if (in_array($lockedBooking->status, ['running', 'completed'])) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'status' => ['Cannot cancel a booking that is already running or completed to preserve accounting integrity.']
                     ]);
@@ -369,18 +371,18 @@ class BookingController extends Controller
 
                 $refundAmount = $validated['refund_amount'] ?? 0;
                 
-                if ($refundAmount > $booking->paid_amount) {
+                if ($refundAmount > $lockedBooking->paid_amount) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'refund_amount' => ['Refund cannot exceed the previously paid amount of ' . $booking->paid_amount]
+                        'refund_amount' => ['Refund cannot exceed the previously paid amount of ' . $lockedBooking->paid_amount]
                     ]);
                 }
 
                 // If cancelled, the client no longer owes the due amount for this booking
-                if ($booking->due_amount > 0) {
-                    $client->decrement('total_due', $booking->due_amount);
+                if ($lockedBooking->due_amount > 0) {
+                    $client->decrement('total_due', $lockedBooking->due_amount);
                 }
                 
-                $booking->update([
+                $lockedBooking->update([
                     'status' => 'cancelled',
                     'due_amount' => 0, // Due is forgiven on cancellation
                     'refund_amount' => $refundAmount
@@ -389,7 +391,7 @@ class BookingController extends Controller
                 // Record the cash going OUT of the drawer for accurate accounting
                 if ($refundAmount > 0) {
                     \App\Models\Payment::create([
-                        'client_id' => $booking->client_id,
+                        'client_id' => $lockedBooking->client_id,
                         'amount' => $refundAmount,
                         'type' => 'out',
                         'payment_method' => 'cash', // Default to cash refund
@@ -398,7 +400,7 @@ class BookingController extends Controller
                 }
                 
                 // Update slots status to blocked/cancelled so they free up
-                $booking->slots()->update(['status' => 'blocked']);
+                $lockedBooking->slots()->update(['status' => 'blocked']);
                 return;
             }
 
@@ -406,27 +408,27 @@ class BookingController extends Controller
             if (isset($validated['additional_payment']) && $validated['additional_payment'] > 0) {
                 $payment = $validated['additional_payment'];
                 
-                if ($payment > $booking->due_amount) {
+                if ($payment > $lockedBooking->due_amount) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'additional_payment' => ['Payment cannot exceed the due amount of ' . $booking->due_amount]
+                        'additional_payment' => ['Payment cannot exceed the due amount of ' . $lockedBooking->due_amount]
                     ]);
                 }
 
-                $booking->paid_amount += $payment;
-                $booking->due_amount -= $payment;
+                $lockedBooking->paid_amount += $payment;
+                $lockedBooking->due_amount -= $payment;
                 
-                if ($booking->due_amount == 0 && $booking->status === 'pending') {
-                    $booking->status = 'confirmed';
+                if ($lockedBooking->due_amount == 0 && $lockedBooking->status === 'pending') {
+                    $lockedBooking->status = 'confirmed';
                 }
 
-                $booking->save();
+                $lockedBooking->save();
 
                 // Reduce client's total due
                 $client->decrement('total_due', $payment);
                 
                 // Create Payment record for accurate daily cash reconciliation
                 \App\Models\Payment::create([
-                    'client_id' => $booking->client_id,
+                    'client_id' => $lockedBooking->client_id,
                     'amount' => $payment,
                     'type' => 'in',
                     'payment_method' => 'cash', // Defaulting to cash for POS update
@@ -436,7 +438,7 @@ class BookingController extends Controller
 
             // 3. Handle General Status Update
             if (isset($validated['status']) && $validated['status'] !== 'cancelled') {
-                $booking->update(['status' => $validated['status']]);
+                $lockedBooking->update(['status' => $validated['status']]);
             }
         });
 
@@ -460,7 +462,7 @@ class BookingController extends Controller
         \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
             // Reverse the due amount from the client's ledger if the booking is not already cancelled
             if ($booking->status !== 'cancelled' && $booking->due_amount > 0) {
-                $client = \App\Models\Client::find($booking->client_id);
+                $client = \App\Models\Client::lockForUpdate()->find($booking->client_id);
                 if ($client) {
                     $client->decrement('total_due', $booking->due_amount);
                 }
