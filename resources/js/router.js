@@ -95,6 +95,12 @@ const routes = [
         name: 'SettingsRoles',
         component: () => import('./modules/settings/views/UserPermissions.vue'),
         meta: { permission: 'manage_users' }
+      },
+      {
+        path: 'expenses',
+        name: 'ExpenseList',
+        component: () => import('./modules/expenses/views/List.vue'),
+        meta: { permission: 'manage_bookings' }
       }
     ]
   },
