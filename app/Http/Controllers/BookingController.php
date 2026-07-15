@@ -261,13 +261,12 @@ class BookingController extends Controller
         }
         
         $netAmount = max(0, $totalAmount - $discount);
-        $paidAmount = $validated['paid_amount'] ?? 0;
         
-        if ($paidAmount > $netAmount) {
-            return response()->json([
-                'errors' => ['paid_amount' => ['Paid amount (৳' . $paidAmount . ') cannot exceed the net amount (৳' . $netAmount . ').']]
-            ], 422);
-        }
+        $requestedPaidAmount = $validated['paid_amount'] ?? 0;
+        
+        // SECURITY FIX: Ensure the recorded paid amount does not exceed the net amount
+        // If a customer pays a 1000 note for an 800 bill, the revenue is 800 (200 is change)
+        $paidAmount = min($requestedPaidAmount, $netAmount);
         
         $dueAmount = $netAmount - $paidAmount;
         

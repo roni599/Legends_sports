@@ -65,9 +65,11 @@ class POSController extends Controller
             }
             
             // Log Payment (Cash Drawer)
-            if ($paid > 0) {
+            $actualReceived = min($paid, $grandTotal); // If paid 500 for a 100 bill, revenue is 100, not 500
+            
+            if ($actualReceived > 0) {
                 \App\Models\Payment::create([
-                    'amount' => $paid,
+                    'amount' => $actualReceived,
                     'type' => 'in',
                     'payment_method' => 'cash',
                     'transaction_id' => $invoice->invoice_number
