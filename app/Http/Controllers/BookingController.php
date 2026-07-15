@@ -206,6 +206,7 @@ class BookingController extends Controller
                 $q->where('ground_id', $ground->id)->orWhereNull('ground_id');
             })->get();
 
+        $appliedRules = [];
         foreach ($rules as $rule) {
             $applies = false;
             if ($rule->type === 'weekend') {
@@ -223,7 +224,14 @@ class BookingController extends Controller
                     if ($bs < $re && $be > $rs) $applies = true;
                 }
             }
-            if ($applies) $totalAmount += $rule->price_modifier;
+            if ($applies) {
+                $totalAmount += $rule->price_modifier;
+                $appliedRules[] = [
+                    'name' => $rule->name,
+                    'type' => $rule->type,
+                    'modifier' => $rule->price_modifier
+                ];
+            }
         }
         $totalAmount = max(0, $totalAmount);
 
@@ -278,7 +286,8 @@ class BookingController extends Controller
                 'net_amount' => $netAmount,
                 'paid_amount' => $paidAmount,
                 'due_amount' => $dueAmount,
-                'status' => $status
+                'status' => $status,
+                'applied_rules' => json_encode($appliedRules)
             ]);
 
             $booking->slots()->create([
