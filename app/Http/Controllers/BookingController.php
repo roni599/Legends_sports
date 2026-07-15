@@ -125,12 +125,22 @@ class BookingController extends Controller
                     $applies = true;
                 }
             } elseif ($rule->type === 'peak_hour') {
-                // Check if booking overlaps with peak hour
-                $ruleStart = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->start_time);
-                $ruleEnd = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->end_time);
+                // Check if booking overlaps with peak hour (handling midnight crossing rules)
+                $rs = \Carbon\Carbon::parse($rule->start_time)->format('H:i:s');
+                $re = \Carbon\Carbon::parse($rule->end_time)->format('H:i:s');
+                $bs = \Carbon\Carbon::parse($validated['start_time'])->format('H:i:s');
+                $be = \Carbon\Carbon::parse($validated['end_time'])->format('H:i:s');
                 
-                if ($start < $ruleEnd && $end > $ruleStart) {
-                    $applies = true;
+                if ($rs > $re) {
+                    // Rule crosses midnight (e.g., 20:00 to 02:00)
+                    if (($bs < "24:00:00" && $be > $rs) || ($bs < $re && $be > "00:00:00")) {
+                        $applies = true;
+                    }
+                } else {
+                    // Standard rule (e.g., 18:00 to 22:00)
+                    if ($bs < $re && $be > $rs) {
+                        $applies = true;
+                    }
                 }
             } elseif ($rule->type === 'tournament') {
                 // This would typically be a manual toggle from the frontend, but we'll assume false for standard calculations
@@ -215,9 +225,16 @@ class BookingController extends Controller
                 $dayOfWeek = $start->dayOfWeekIso;
                 if ($dayOfWeek == 5 || $dayOfWeek == 6) $applies = true;
             } elseif ($rule->type === 'peak_hour') {
-                $ruleStart = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->start_time);
-                $ruleEnd = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->end_time);
-                if ($start < $ruleEnd && $end > $ruleStart) $applies = true;
+                $rs = \Carbon\Carbon::parse($rule->start_time)->format('H:i:s');
+                $re = \Carbon\Carbon::parse($rule->end_time)->format('H:i:s');
+                $bs = \Carbon\Carbon::parse($validated['start_time'])->format('H:i:s');
+                $be = \Carbon\Carbon::parse($validated['end_time'])->format('H:i:s');
+                
+                if ($rs > $re) {
+                    if (($bs < "24:00:00" && $be > $rs) || ($bs < $re && $be > "00:00:00")) $applies = true;
+                } else {
+                    if ($bs < $re && $be > $rs) $applies = true;
+                }
             }
             if ($applies) $totalAmount += $rule->price_modifier;
         }
