@@ -225,6 +225,13 @@ class BookingController extends Controller
 
         // 3. Financial calculations
         $discount = $validated['discount'] ?? 0;
+        
+        if ($discount > $totalAmount) {
+            return response()->json([
+                'errors' => ['discount' => ['Discount (৳' . $discount . ') cannot exceed the total amount (৳' . $totalAmount . ').']]
+            ], 422);
+        }
+        
         $netAmount = max(0, $totalAmount - $discount);
         $paidAmount = $validated['paid_amount'] ?? 0;
         
