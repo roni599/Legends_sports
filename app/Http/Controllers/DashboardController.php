@@ -15,13 +15,13 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $startOfMonth = Carbon::now()->startOfMonth();
 
-        $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)
-            ->where('type', 'in')
-            ->sum('amount');
+        $todayIn = \App\Models\Payment::whereDate('created_at', $today)->where('type', 'in')->sum('amount');
+        $todayOut = \App\Models\Payment::whereDate('created_at', $today)->where('type', 'out')->sum('amount');
+        $todayRevenue = $todayIn - $todayOut;
 
-        $monthlyRevenue = \App\Models\Payment::whereBetween('created_at', [$startOfMonth, Carbon::now()])
-            ->where('type', 'in')
-            ->sum('amount');
+        $monthlyIn = \App\Models\Payment::whereBetween('created_at', [$startOfMonth, Carbon::now()])->where('type', 'in')->sum('amount');
+        $monthlyOut = \App\Models\Payment::whereBetween('created_at', [$startOfMonth, Carbon::now()])->where('type', 'out')->sum('amount');
+        $monthlyRevenue = $monthlyIn - $monthlyOut;
 
         $totalDue = Client::sum('total_due');
 
@@ -53,12 +53,22 @@ class DashboardController extends Controller
 
     public function chart()
     {
-        // Get last 7 days accurate cash received from Payments table
-        $chartData = \App\Models\Payment::select(
+        // Get last 7 days accurate Net Revenue (In - Out) from Payments table
+        $chartDataIn = \App\Models\Payment::select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('SUM(amount) as revenue')
             )
             ->where('type', 'in')
+            ->where('created_at', '>=', Carbon::now()->subDays(6)->startOfDay())
+            ->groupBy('date')
+            ->orderBy('date', 'ASC')
+            ->get();
+            
+        $chartDataOut = \App\Models\Payment::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(amount) as refunds')
+            )
+            ->where('type', 'out')
             ->where('created_at', '>=', Carbon::now()->subDays(6)->startOfDay())
             ->groupBy('date')
             ->orderBy('date', 'ASC')
@@ -73,8 +83,13 @@ class DashboardController extends Controller
             $date = Carbon::now()->subDays($i)->format('Y-m-d');
             $labels[] = Carbon::parse($date)->format('D'); // Mon, Tue
             
-            $dayData = $chartData->firstWhere('date', $date);
-            $data[] = $dayData ? (float) $dayData->revenue : 0;
+            $inData = $chartDataIn->firstWhere('date', $date);
+            $outData = $chartDataOut->firstWhere('date', $date);
+            
+            $grossRevenue = $inData ? (float) $inData->revenue : 0;
+            $refunds = $outData ? (float) $outData->refunds : 0;
+            
+            $data[] = max(0, $grossRevenue - $refunds);
         }
 
         return response()->json([

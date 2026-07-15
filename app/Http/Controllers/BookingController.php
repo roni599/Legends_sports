@@ -387,6 +387,17 @@ class BookingController extends Controller
                     'refund_amount' => $refundAmount
                 ]);
                 
+                // Record the cash going OUT of the drawer for accurate accounting
+                if ($refundAmount > 0) {
+                    \App\Models\Payment::create([
+                        'client_id' => $booking->client_id,
+                        'amount' => $refundAmount,
+                        'type' => 'out',
+                        'payment_method' => 'cash', // Default to cash refund
+                        'transaction_id' => 'REF-' . time()
+                    ]);
+                }
+                
                 // Update slots status to blocked/cancelled so they free up
                 $booking->slots()->update(['status' => 'blocked']);
                 return;
