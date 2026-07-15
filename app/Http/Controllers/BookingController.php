@@ -71,6 +71,74 @@ class BookingController extends Controller
         ]);
     }
 
+    public function calculatePrice(Request $request)
+    {
+        $validated = $request->validate([
+            'ground_id' => 'required|exists:grounds,id',
+            'date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+        ]);
+
+        $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
+        
+        $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
+        $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
+        $durationHours = $end->diffInMinutes($start) / 60;
+
+        $basePrice = $ground->base_price_per_hour * $durationHours;
+        $totalPrice = $basePrice;
+
+        $appliedRules = [];
+
+        // Fetch active rules applicable to this ground or all grounds
+        $rules = \App\Models\PricingRule::where('status', 'active')
+            ->where(function($q) use ($ground) {
+                $q->where('ground_id', $ground->id)->orWhereNull('ground_id');
+            })->get();
+
+        foreach ($rules as $rule) {
+            $applies = false;
+            
+            if ($rule->type === 'weekend') {
+                // In BD, weekend is Friday (5) or Saturday (6)
+                $dayOfWeek = $start->dayOfWeekIso;
+                if ($dayOfWeek == 5 || $dayOfWeek == 6) {
+                    $applies = true;
+                }
+            } elseif ($rule->type === 'peak_hour') {
+                // Check if booking overlaps with peak hour
+                $ruleStart = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->start_time);
+                $ruleEnd = \Carbon\Carbon::parse($validated['date'] . ' ' . $rule->end_time);
+                
+                if ($start < $ruleEnd && $end > $ruleStart) {
+                    $applies = true;
+                }
+            } elseif ($rule->type === 'tournament') {
+                // This would typically be a manual toggle from the frontend, but we'll assume false for standard calculations
+                $applies = $request->input('is_tournament', false);
+            }
+
+            if ($applies) {
+                $totalPrice += $rule->price_modifier;
+                $appliedRules[] = [
+                    'name' => $rule->name,
+                    'modifier' => $rule->price_modifier
+                ];
+            }
+        }
+
+        // Ensure total price doesn't go below 0 due to discounts
+        $totalPrice = max(0, $totalPrice);
+
+        return response()->json([
+            'duration_hours' => $durationHours,
+            'base_price' => $basePrice,
+            'applied_rules' => $appliedRules,
+            'total_price' => $totalPrice
+        ]);
+    }
+
     public function store(Request $request)
     {
         // To be implemented in next step

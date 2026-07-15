@@ -17,5 +17,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
     
     Route::post('bookings/check-availability', [App\Http\Controllers\BookingController::class, 'checkAvailability']);
+    Route::post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
     Route::apiResource('bookings', App\Http\Controllers\BookingController::class);
 });
