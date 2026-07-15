@@ -314,6 +314,16 @@ class BookingController extends Controller
                 'status' => 'booked'
             ]);
 
+            if ($paidAmount > 0) {
+                \App\Models\Payment::create([
+                    'client_id' => $validated['client_id'],
+                    'amount' => $paidAmount,
+                    'type' => 'in',
+                    'payment_method' => 'cash', // Defaulting to cash for initial booking via POS
+                    'transaction_id' => 'BKG-' . time()
+                ]);
+            }
+
             if ($dueAmount > 0) {
                 $client = \App\Models\Client::find($validated['client_id']);
                 $client->increment('total_due', $dueAmount);
@@ -403,6 +413,15 @@ class BookingController extends Controller
 
                 // Reduce client's total due
                 $client->decrement('total_due', $payment);
+                
+                // Create Payment record for accurate daily cash reconciliation
+                \App\Models\Payment::create([
+                    'client_id' => $booking->client_id,
+                    'amount' => $payment,
+                    'type' => 'in',
+                    'payment_method' => 'cash', // Defaulting to cash for POS update
+                    'transaction_id' => 'BKG-UPD-' . time()
+                ]);
             }
 
             // 3. Handle General Status Update

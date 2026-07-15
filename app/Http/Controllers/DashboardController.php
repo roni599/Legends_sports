@@ -15,13 +15,13 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $startOfMonth = Carbon::now()->startOfMonth();
 
-        $todayRevenue = Booking::whereDate('created_at', $today)
-            ->whereNotIn('status', ['cancelled'])
-            ->sum('paid_amount');
+        $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)
+            ->where('type', 'in')
+            ->sum('amount');
 
-        $monthlyRevenue = Booking::whereBetween('created_at', [$startOfMonth, Carbon::now()])
-            ->whereNotIn('status', ['cancelled'])
-            ->sum('paid_amount');
+        $monthlyRevenue = \App\Models\Payment::whereBetween('created_at', [$startOfMonth, Carbon::now()])
+            ->where('type', 'in')
+            ->sum('amount');
 
         $totalDue = Client::sum('total_due');
 
@@ -53,13 +53,13 @@ class DashboardController extends Controller
 
     public function chart()
     {
-        // Get last 7 days revenue
-        $chartData = Booking::select(
+        // Get last 7 days accurate cash received from Payments table
+        $chartData = \App\Models\Payment::select(
                 DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(paid_amount) as revenue')
+                DB::raw('SUM(amount) as revenue')
             )
+            ->where('type', 'in')
             ->where('created_at', '>=', Carbon::now()->subDays(6)->startOfDay())
-            ->whereNotIn('status', ['cancelled'])
             ->groupBy('date')
             ->orderBy('date', 'ASC')
             ->get();
