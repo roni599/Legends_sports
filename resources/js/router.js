@@ -107,6 +107,18 @@ const routes = [
         name: 'SupplierList',
         component: () => import('./modules/suppliers/views/List.vue'),
         meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'pos',
+        name: 'POS',
+        component: () => import('./modules/pos/views/Index.vue'),
+        meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'products',
+        name: 'ProductList',
+        component: () => import('./modules/pos/views/Products.vue'),
+        meta: { permission: 'manage_bookings' }
       }
     ]
   },

@@ -24,6 +24,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Suppliers
     Route::middleware('permission:view_bookings')->apiResource('suppliers', App\Http\Controllers\SupplierController::class);
 
+    // POS & Products
+    Route::middleware('permission:view_bookings')->apiResource('products', App\Http\Controllers\ProductController::class);
+    Route::middleware('permission:create_bookings')->post('pos/checkout', [App\Http\Controllers\POSController::class, 'checkout']);
+
     // Users
     Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
     Route::middleware('permission:view_users')->get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);

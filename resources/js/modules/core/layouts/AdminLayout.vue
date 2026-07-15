@@ -37,6 +37,19 @@
           </div>
         </div>
 
+        <!-- POS Module -->
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_bookings')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#posMenu" role="button" aria-expanded="false" aria-controls="posMenu">
+            POS & Store ▾
+          </a>
+          <div class="collapse" id="posMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/pos" class="nav-item-custom text-sm mb-1 py-1" active-class="active">POS Checkout</router-link>
+              <router-link to="/products" class="nav-item-custom text-sm py-1" active-class="active">Products (Stock)</router-link>
+            </div>
+          </div>
+        </div>
+
         <!-- Financials Module -->
         <div class="nav-item-group" v-if="authStore.hasPermission('view_bookings')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#financialMenu" role="button" aria-expanded="false" aria-controls="financialMenu">
