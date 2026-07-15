@@ -40,7 +40,7 @@ class ExpenseController extends Controller
                 'amount' => $validated['amount'],
                 'type' => 'out',
                 'payment_method' => 'cash', // Assuming expenses are paid in cash for now
-                'transaction_id' => 'EXP-' . time(),
+                'transaction_id' => 'EXP-' . $exp->id,
                 'created_at' => $validated['date'] . ' ' . date('H:i:s')
             ]);
             
@@ -64,16 +64,30 @@ class ExpenseController extends Controller
             'description' => 'nullable|string'
         ]);
         
-        // Updating expense accounting can be complex, for simplicity we just update the expense record.
-        // A production POS would reverse the old payment out and add a new one, but for this context:
-        $expense->update($validated);
-        
-        return response()->json($expense->load('category'));
+        return DB::transaction(function () use ($validated, $expense) {
+            $expense->update($validated);
+            
+            // Sync with Payment ledger
+            $payment = \App\Models\Payment::where('transaction_id', 'EXP-' . $expense->id)->first();
+            if ($payment) {
+                $payment->update([
+                    'amount' => $validated['amount'],
+                    'created_at' => $validated['date'] . ' ' . date('H:i:s')
+                ]);
+            }
+            
+            return response()->json($expense->load('category'));
+        });
     }
 
     public function destroy(Expense $expense)
     {
-        $expense->delete();
-        return response()->json(null, 204);
+        return DB::transaction(function () use ($expense) {
+            // Remove from Payment ledger
+            \App\Models\Payment::where('transaction_id', 'EXP-' . $expense->id)->delete();
+            
+            $expense->delete();
+            return response()->json(null, 204);
+        });
     }
 }
