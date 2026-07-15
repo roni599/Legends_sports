@@ -49,6 +49,18 @@
             </div>
           </div>
         </div>
+
+        <!-- Settings Module -->
+        <div class="nav-item-group" v-if="authStore.hasRole('super-admin')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="false" aria-controls="settingsMenu">
+            Settings ▾
+          </a>
+          <div class="collapse" id="settingsMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/settings/roles" class="nav-item-custom text-sm mb-1 py-1" active-class="active">User Roles & Permissions</router-link>
+            </div>
+          </div>
+        </div>
       </nav>
     </aside>
 

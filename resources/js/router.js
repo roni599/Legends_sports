@@ -89,6 +89,12 @@ const routes = [
         name: 'BookingCalendar',
         component: () => import('./modules/bookings/views/Calendar.vue'),
         meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'settings/roles',
+        name: 'SettingsRoles',
+        component: () => import('./modules/settings/views/UserPermissions.vue'),
+        meta: { permission: 'manage_users' }
       }
     ]
   },

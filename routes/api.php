@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Only Admin can manage Users
     Route::middleware('permission:manage_users')->group(function() {
         Route::get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
+        Route::get('users/permissions', [App\Http\Controllers\UserController::class, 'permissions']);
         Route::apiResource('users', App\Http\Controllers\UserController::class);
     });
     

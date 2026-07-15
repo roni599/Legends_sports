@@ -11,7 +11,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('roles')->latest()->get();
+        $users = User::with(['roles', 'directPermissions'])->latest()->get();
         return response()->json($users);
     }
 
@@ -21,7 +21,9 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'role_id' => 'required|exists:roles,id'
+            'role_id' => 'required|exists:roles,id',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,id'
         ]);
 
         $user = User::create([
@@ -31,8 +33,11 @@ class UserController extends Controller
         ]);
 
         $user->roles()->attach($validated['role_id']);
+        if (isset($validated['permissions'])) {
+            $user->directPermissions()->sync($validated['permissions']);
+        }
 
-        return response()->json($user->load('roles'), 201);
+        return response()->json($user->load(['roles', 'directPermissions']), 201);
     }
 
     public function update(Request $request, User $user)
@@ -46,7 +51,9 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'role_id' => 'required|exists:roles,id'
+            'role_id' => 'required|exists:roles,id',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,id'
         ]);
 
         $user->name = $validated['name'];
@@ -57,8 +64,11 @@ class UserController extends Controller
         $user->save();
 
         $user->roles()->sync([$validated['role_id']]);
+        if (isset($validated['permissions'])) {
+            $user->directPermissions()->sync($validated['permissions']);
+        }
 
-        return response()->json($user->load('roles'));
+        return response()->json($user->load(['roles', 'directPermissions']));
     }
 
     public function destroy(User $user, Request $request)
@@ -74,5 +84,10 @@ class UserController extends Controller
     public function roles()
     {
         return response()->json(Role::all());
+    }
+
+    public function permissions()
+    {
+        return response()->json(\App\Models\Permission::all());
     }
 }

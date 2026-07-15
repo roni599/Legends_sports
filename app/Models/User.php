@@ -56,8 +56,19 @@ class User extends Authenticatable
         return !! $role->intersect($this->roles)->count();
     }
 
+    public function directPermissions()
+    {
+        return $this->belongsToMany(Permission::class, 'permission_user');
+    }
+
     public function hasPermission($permission)
     {
+        // Check direct user permissions
+        if ($this->directPermissions->contains('slug', $permission)) {
+            return true;
+        }
+        
+        // Check role permissions
         return $this->roles->flatMap->permissions->contains('slug', $permission);
     }
 }
