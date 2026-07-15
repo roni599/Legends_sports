@@ -93,6 +93,12 @@ class SupplierController extends Controller
         ]);
         
         return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $supplier) {
+            $supplier = Supplier::lockForUpdate()->find($supplier->id);
+            
+            // If they give us a refund, they owe us less (or we owe them more).
+            // This increases their balance (moves it towards positive/due).
+            $supplier->increment('balance', $validated['amount']);
+            
             \App\Models\Payment::create([
                 'amount' => $validated['amount'],
                 'type' => 'in', // money entering the business

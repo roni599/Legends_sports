@@ -87,7 +87,8 @@ class PurchaseController extends Controller
                     'amount' => $requestedPaid,
                     'type' => 'out', // money leaving the business
                     'payment_method' => 'cash',
-                    'transaction_id' => 'PUR-' . $purchase->id
+                    'transaction_id' => 'PUR-' . $purchase->id,
+                    'created_at' => $validated['purchase_date'] . ' ' . date('H:i:s')
                 ]);
             }
 
