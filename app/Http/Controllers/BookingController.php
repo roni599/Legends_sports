@@ -187,23 +187,7 @@ class BookingController extends Controller
             return response()->json(['message' => 'Ground is not available.'], 422);
         }
 
-        // 1. Check Availability
-        $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
-            $q->where('ground_id', $validated['ground_id'])
-              ->whereIn('status', ['pending', 'confirmed', 'running']);
-        })
-        ->where('date', $validated['date'])
-        ->where('start_time', '<', $validated['end_time'])
-        ->where('end_time', '>', $validated['start_time'])
-        ->exists();
-
-        if ($conflict) {
-            return response()->json([
-                'errors' => ['time_slot' => ['The selected time slot is already booked.']]
-            ], 422);
-        }
-
-        // 2. Calculate Price (Reusing logic from calculatePrice)
+        // 2. Calculate Price
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
         $durationMinutes = $end->diffInMinutes($start);
@@ -265,8 +249,27 @@ class BookingController extends Controller
         
         $status = $paidAmount > 0 ? 'confirmed' : 'pending';
 
-        // 4. Save to DB with Transaction
-        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status) {
+        // 4. Save to DB with Transaction and Pessimistic Locking
+        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground) {
+            
+            // Pessimistic Lock on Ground to prevent Race Conditions (Double Booking)
+            \App\Models\Ground::where('id', $ground->id)->lockForUpdate()->first();
+
+            // 1. Check Availability (Inside Transaction)
+            $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
+                $q->where('ground_id', $validated['ground_id'])
+                  ->whereIn('status', ['pending', 'confirmed', 'running']);
+            })
+            ->where('date', $validated['date'])
+            ->where('start_time', '<', $validated['end_time'])
+            ->where('end_time', '>', $validated['start_time'])
+            ->exists();
+
+            if ($conflict) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'time_slot' => ['The selected time slot is already booked.']
+                ]);
+            }
             $booking = \App\Models\Booking::create([
                 'client_id' => $validated['client_id'],
                 'ground_id' => $validated['ground_id'],
