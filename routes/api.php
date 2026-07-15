@@ -23,7 +23,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Suppliers & Purchases
     Route::middleware('permission:view_bookings')->apiResource('suppliers', App\Http\Controllers\SupplierController::class);
-    Route::middleware('permission:view_bookings')->post('suppliers/{supplier}/pay', [App\Http\Controllers\SupplierController::class, 'paySupplier']);
+    Route::middleware('permission:view_bookings')->get('suppliers/{supplier}/ledger', [App\Http\Controllers\SupplierController::class, 'ledger']);
+    Route::middleware(['permission:view_bookings', App\Http\Middleware\CheckMonthLock::class])->post('suppliers/{supplier}/pay', [App\Http\Controllers\SupplierController::class, 'paySupplier']);
+    Route::middleware(['permission:view_bookings', App\Http\Middleware\CheckMonthLock::class])->post('suppliers/{supplier}/refund', [App\Http\Controllers\SupplierController::class, 'receiveRefund']);
+    
     Route::middleware(['permission:create_bookings', App\Http\Middleware\CheckMonthLock::class])->apiResource('purchases', App\Http\Controllers\PurchaseController::class);
 
     // POS & Products
