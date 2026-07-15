@@ -12,25 +12,42 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user()->load('roles.permissions');
     });
 
-    // Only Manager or Admin can manage Grounds and Pricing Rules
-    Route::middleware('permission:manage_grounds')->group(function() {
-        Route::apiResource('grounds', App\Http\Controllers\GroundController::class);
-        Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
-    });
+    // Users
+    Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
+    Route::middleware('permission:view_users')->get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
+    Route::middleware('permission:view_users')->get('users/permissions', [App\Http\Controllers\UserController::class, 'permissions']);
+    Route::middleware('permission:create_users')->post('users', [App\Http\Controllers\UserController::class, 'store']);
+    Route::middleware('permission:view_users')->get('users/{user}', [App\Http\Controllers\UserController::class, 'show']);
+    Route::middleware('permission:edit_users')->put('users/{user}', [App\Http\Controllers\UserController::class, 'update']);
+    Route::middleware('permission:delete_users')->delete('users/{user}', [App\Http\Controllers\UserController::class, 'destroy']);
+
+    // Grounds & Pricing
+    Route::middleware('permission:view_grounds')->get('grounds', [App\Http\Controllers\GroundController::class, 'index']);
+    Route::middleware('permission:create_grounds')->post('grounds', [App\Http\Controllers\GroundController::class, 'store']);
+    Route::middleware('permission:view_grounds')->get('grounds/{ground}', [App\Http\Controllers\GroundController::class, 'show']);
+    Route::middleware('permission:edit_grounds')->put('grounds/{ground}', [App\Http\Controllers\GroundController::class, 'update']);
+    Route::middleware('permission:delete_grounds')->delete('grounds/{ground}', [App\Http\Controllers\GroundController::class, 'destroy']);
     
-    // Only Admin can manage Users
-    Route::middleware('permission:manage_users')->group(function() {
-        Route::get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
-        Route::get('users/permissions', [App\Http\Controllers\UserController::class, 'permissions']);
-        Route::apiResource('users', App\Http\Controllers\UserController::class);
-    });
+    Route::middleware('permission:view_grounds')->get('pricing-rules', [App\Http\Controllers\PricingRuleController::class, 'index']);
+    Route::middleware('permission:create_grounds')->post('pricing-rules', [App\Http\Controllers\PricingRuleController::class, 'store']);
+    Route::middleware('permission:view_grounds')->get('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'show']);
+    Route::middleware('permission:edit_grounds')->put('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'update']);
+    Route::middleware('permission:delete_grounds')->delete('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'destroy']);
+
+    // Clients
+    Route::middleware('permission:view_clients')->get('clients', [App\Http\Controllers\ClientController::class, 'index']);
+    Route::middleware('permission:create_clients')->post('clients', [App\Http\Controllers\ClientController::class, 'store']);
+    Route::middleware('permission:view_clients')->get('clients/{client}', [App\Http\Controllers\ClientController::class, 'show']);
+    Route::middleware('permission:edit_clients')->put('clients/{client}', [App\Http\Controllers\ClientController::class, 'update']);
+    Route::middleware('permission:delete_clients')->delete('clients/{client}', [App\Http\Controllers\ClientController::class, 'destroy']);
+
+    // Bookings
+    Route::middleware('permission:view_bookings')->post('bookings/check-availability', [App\Http\Controllers\BookingController::class, 'checkAvailability']);
+    Route::middleware('permission:view_bookings')->post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
     
-    // Cashier, Manager or Admin can manage Clients and Bookings
-    Route::middleware('permission:manage_bookings')->group(function() {
-        Route::apiResource('clients', App\Http\Controllers\ClientController::class);
-        
-        Route::post('bookings/check-availability', [App\Http\Controllers\BookingController::class, 'checkAvailability']);
-        Route::post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
-        Route::apiResource('bookings', App\Http\Controllers\BookingController::class);
-    });
+    Route::middleware('permission:view_bookings')->get('bookings', [App\Http\Controllers\BookingController::class, 'index']);
+    Route::middleware('permission:create_bookings')->post('bookings', [App\Http\Controllers\BookingController::class, 'store']);
+    Route::middleware('permission:view_bookings')->get('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'show']);
+    Route::middleware('permission:edit_bookings')->put('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'update']);
+    Route::middleware('permission:delete_bookings')->delete('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'destroy']);
 });

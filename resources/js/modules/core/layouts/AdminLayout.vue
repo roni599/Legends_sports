@@ -12,20 +12,20 @@
         </router-link>
 
         <!-- Clients Module -->
-        <div class="nav-item-group" v-if="authStore.hasRole('super-admin') || authStore.hasRole('manager') || authStore.hasRole('booking-manager')">
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_clients')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#clientMenu" role="button" aria-expanded="false" aria-controls="clientMenu">
             Clients ▾
           </a>
           <div class="collapse" id="clientMenu">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/clients" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client List</router-link>
-              <router-link to="/clients/create" class="nav-item-custom text-sm py-1" active-class="active">Add New Client</router-link>
+              <router-link to="/clients/create" class="nav-item-custom text-sm py-1" active-class="active" v-if="authStore.hasPermission('create_clients')">Add New Client</router-link>
             </div>
           </div>
         </div>
 
         <!-- Booking Module -->
-        <div class="nav-item-group" v-if="authStore.hasRole('super-admin') || authStore.hasRole('manager') || authStore.hasRole('booking-manager')">
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_bookings')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#bookingMenu" role="button" aria-expanded="false" aria-controls="bookingMenu">
             Bookings ▾
           </a>
@@ -38,7 +38,7 @@
         </div>
 
         <!-- Ground Module -->
-        <div class="nav-item-group" v-if="authStore.hasRole('super-admin')">
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_grounds')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#groundMenu" role="button" aria-expanded="false" aria-controls="groundMenu">
             Ground Setup ▾
           </a>
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Settings Module -->
-        <div class="nav-item-group" v-if="authStore.hasRole('super-admin')">
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_users')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="false" aria-controls="settingsMenu">
             Settings ▾
           </a>
