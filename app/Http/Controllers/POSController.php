@@ -36,7 +36,9 @@ class POSController extends Controller
                 if ($product->stock_quantity < $item['quantity']) {
                     throw new \Exception("Not enough stock for {$product->name}");
                 }
-                $subtotal += ($item['quantity'] * $item['price']);
+                
+                // SECURITY FIX: Always use the database price to prevent payload manipulation
+                $subtotal += ($item['quantity'] * $product->price);
             }
             
             $discount = $validated['discount'] ?? 0;
@@ -81,8 +83,8 @@ class POSController extends Controller
                     'item_type' => $product->category,
                     'item_name' => $product->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['price'],
-                    'total_price' => $item['quantity'] * $item['price']
+                    'unit_price' => $product->price, // Use DB price
+                    'total_price' => $item['quantity'] * $product->price
                 ]);
                 
                 $product->decrement('stock_quantity', $item['quantity']);

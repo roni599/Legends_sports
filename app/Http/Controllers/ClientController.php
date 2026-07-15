@@ -54,9 +54,9 @@ class ClientController extends Controller
 
     public function destroy(Client $client)
     {
-        if (\App\Models\Booking::where('client_id', $client->id)->exists()) {
+        if (\App\Models\Booking::where('client_id', $client->id)->exists() || \App\Models\Invoice::where('client_id', $client->id)->exists()) {
             return response()->json([
-                'message' => 'Cannot delete this client because they have a booking history. Deleting them would result in financial data loss.'
+                'message' => 'Cannot delete this client because they have a transaction or booking history. Deleting them would result in financial data loss.'
             ], 422);
         }
 
