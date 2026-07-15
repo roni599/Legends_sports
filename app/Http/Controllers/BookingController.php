@@ -43,6 +43,16 @@ class BookingController extends Controller
             'exclude_booking_id' => 'nullable|exists:bookings,id'
         ]);
 
+        $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
+        $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
+        $durationMinutes = $end->diffInMinutes($start);
+
+        if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
+            return response()->json([
+                'errors' => ['time_slot' => ['Bookings must be in multiples of 30 minutes (e.g., 1 hour, 1.5 hours).']]
+            ], 422);
+        }
+
         $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
         if ($ground->status !== 'active') {
             return response()->json([
@@ -84,7 +94,15 @@ class BookingController extends Controller
         
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
-        $durationHours = $end->diffInMinutes($start) / 60;
+        $durationMinutes = $end->diffInMinutes($start);
+
+        if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
+            return response()->json([
+                'errors' => ['time_slot' => ['Bookings must be in multiples of 30 minutes (e.g., 1 hour, 1.5 hours).']]
+            ], 422);
+        }
+
+        $durationHours = $durationMinutes / 60;
 
         $basePrice = $ground->base_price_per_hour * $durationHours;
         $totalPrice = $basePrice;
@@ -175,7 +193,15 @@ class BookingController extends Controller
         // 2. Calculate Price (Reusing logic from calculatePrice)
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
-        $durationHours = $end->diffInMinutes($start) / 60;
+        $durationMinutes = $end->diffInMinutes($start);
+
+        if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
+            return response()->json([
+                'errors' => ['time_slot' => ['Bookings must be in multiples of 30 minutes (e.g., 1 hour, 1.5 hours).']]
+            ], 422);
+        }
+
+        $durationHours = $durationMinutes / 60;
         $totalAmount = $ground->base_price_per_hour * $durationHours;
 
         $rules = \App\Models\PricingRule::where('status', 'active')
