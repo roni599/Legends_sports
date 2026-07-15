@@ -203,84 +203,34 @@ const chartOptions = {
 const fetchDashboardData = async () => {
   isLoading.value = true;
   try {
-    // 1. Fetch Bookings for KPI and Chart
-    const { data: allBookings } = await axios.get('/api/bookings?all=true');
-    const { data: clients } = await axios.get('/api/clients');
-    const { data: grounds } = await axios.get('/api/grounds?all=true');
+    const [statsRes, chartRes, bookingsRes] = await Promise.all([
+      axios.get('/api/dashboard/stats'),
+      axios.get('/api/dashboard/chart'),
+      axios.get('/api/bookings')
+    ]);
 
-    // Process Recent Bookings
-    recentBookings.value = allBookings.slice(0, 5);
+    const stats = statsRes.data;
+    kpi.value.todayRevenue = parseFloat(stats.today_revenue || 0).toLocaleString();
+    kpi.value.monthlyRevenue = parseFloat(stats.monthly_revenue || 0).toLocaleString();
+    kpi.value.totalDue = parseFloat(stats.total_due || 0).toLocaleString();
+    kpi.value.activeGrounds = stats.active_bookings;
 
-    // Process KPIs
-    const today = new Date().toISOString().split('T')[0];
-    const currentMonth = new Date().getMonth();
-    
-    let tRev = 0, tBook = 0, mRev = 0, mBook = 0;
-    
-    // Group by date for chart (Last 7 days)
-    const last7Days = Array.from({length: 7}, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
-    }).reverse();
-    
-    const chartRevenue = {};
-    last7Days.forEach(d => chartRevenue[d] = 0);
+    // We don't have these exact counts in the new backend, so hide or mock them
+    kpi.value.todayBookings = '-';
+    kpi.value.monthlyBookings = '-';
+    kpi.value.dueClientsCount = '-';
 
-    allBookings.forEach(booking => {
-      if (booking.status !== 'cancelled') {
-        const bDate = booking.slots[0]?.date;
-        const bMonth = new Date(bDate).getMonth();
-        
-        if (bDate === today) {
-          tRev += parseFloat(booking.total_amount);
-          tBook++;
-        }
-        
-        if (bMonth === currentMonth) {
-          mRev += parseFloat(booking.total_amount);
-          mBook++;
-        }
-        
-        if (chartRevenue[bDate] !== undefined) {
-          chartRevenue[bDate] += parseFloat(booking.total_amount);
-        }
-      }
-    });
+    recentBookings.value = bookingsRes.data.data ? bookingsRes.data.data.slice(0, 5) : [];
 
-    kpi.value.todayRevenue = tRev.toLocaleString();
-    kpi.value.todayBookings = tBook;
-    kpi.value.monthlyRevenue = mRev.toLocaleString();
-    kpi.value.monthlyBookings = mBook;
-    
-    // Process Clients Due
-    let totalDue = 0;
-    let dueCount = 0;
-    (clients.data || clients).forEach(c => {
-      if (c.total_due > 0) {
-        totalDue += parseFloat(c.total_due);
-        dueCount++;
-      }
-    });
-    kpi.value.totalDue = totalDue.toLocaleString();
-    kpi.value.dueClientsCount = dueCount;
-    
-    // Process Grounds
-    kpi.value.activeGrounds = grounds.filter(g => g.status === 'active').length;
-
-    // Build Chart Data
     chartData.value = {
-      labels: last7Days.map(d => {
-        const [y, m, day] = d.split('-');
-        return new Date(y, m-1, day).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
-      }),
+      labels: chartRes.data.labels,
       datasets: [
         {
           label: 'Revenue (৳)',
           backgroundColor: '#0d6efd',
           borderColor: '#0d6efd',
           tension: 0.4,
-          data: last7Days.map(d => chartRevenue[d])
+          data: chartRes.data.data
         }
       ]
     };

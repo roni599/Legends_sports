@@ -12,6 +12,10 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user()->load('roles.permissions');
     });
 
+    // Dashboard (Accessible to any authenticated user, but data scoped if needed later)
+    Route::get('dashboard/stats', [App\Http\Controllers\DashboardController::class, 'stats']);
+    Route::get('dashboard/chart', [App\Http\Controllers\DashboardController::class, 'chart']);
+
     // Users
     Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
     Route::middleware('permission:view_users')->get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
