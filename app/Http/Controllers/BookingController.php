@@ -390,6 +390,12 @@ class BookingController extends Controller
             ], 422);
         }
 
+        if ($booking->paid_amount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete a booking that has received payments. Please cancel it instead or refund the amount.'
+            ], 422);
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
             // Reverse the due amount from the client's ledger if the booking is not already cancelled
             if ($booking->status !== 'cancelled' && $booking->due_amount > 0) {
