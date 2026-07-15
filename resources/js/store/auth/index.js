@@ -12,6 +12,12 @@ export const useAuthStore = defineStore('auth', {
     hasRole: (state) => (role) => {
       if (!state.user || !state.user.roles) return false;
       return state.user.roles.some(r => r.slug === role);
+    },
+    hasPermission: (state) => (permission) => {
+      if (!state.user || !state.user.roles) return false;
+      return state.user.roles.some(r => 
+        r.permissions && r.permissions.some(p => p.slug === permission)
+      );
     }
   },
   
