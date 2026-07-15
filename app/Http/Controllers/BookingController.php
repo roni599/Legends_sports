@@ -32,6 +32,9 @@ class BookingController extends Controller
                 $q->whereDate('date', $date);
             });
         }
+        if ($request->has('all')) {
+            return $query->get();
+        }
         
         return $query->paginate(10);
     }

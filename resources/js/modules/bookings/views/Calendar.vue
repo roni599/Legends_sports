@@ -89,11 +89,11 @@ const fetchGrounds = async () => {
 const fetchBookings = async () => {
   try {
     // We will build a specific calendar API endpoint or format this from index
-    const { data } = await axios.get('/api/bookings');
+    const { data } = await axios.get('/api/bookings?all=true');
     
     // Transform into FullCalendar event format
     const events = [];
-    data.data.forEach(booking => {
+    data.forEach(booking => {
       booking.slots.forEach(slot => {
         let color = '#3788d8'; // default primary
         if (booking.status === 'confirmed') color = '#198754';
