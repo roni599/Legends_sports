@@ -17,6 +17,7 @@
             <tr>
               <th>ID</th>
               <th>Name</th>
+              <th>Barcode</th>
               <th>Category</th>
               <th>Price (৳)</th>
               <th>Stock</th>
@@ -29,12 +30,13 @@
               <td colspan="7" class="text-center py-4">Loading products...</td>
             </tr>
             <tr v-else-if="productStore.products.length === 0">
-              <td colspan="7" class="text-center py-4">No products found</td>
+              <td colspan="8" class="text-center py-4">No products found</td>
             </tr>
             <tr v-else v-for="product in productStore.products" :key="product.id">
               <td>#{{ product.id }}</td>
               <td>{{ product.name }}</td>
-              <td><span class="badge bg-secondary text-uppercase">{{ product.category }}</span></td>
+              <td>{{ product.barcode || '-' }}</td>
+              <td><span class="badge bg-secondary">{{ product.category }}</span></td>
               <td class="text-success fw-bold">{{ product.price }}</td>
               <td>
                 <span :class="{'text-danger fw-bold': product.stock_quantity === 0}">{{ product.stock_quantity }}</span>
@@ -75,6 +77,10 @@
               <div class="mb-3">
                 <label class="form-label">Product Name *</label>
                 <input type="text" v-model="productForm.name" class="form-control custom-input" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Barcode (Optional)</label>
+                <input type="text" v-model="productForm.barcode" class="form-control custom-input" placeholder="Scan or type barcode">
               </div>
               <div class="mb-3">
                 <label class="form-label">Category *</label>
@@ -130,7 +136,8 @@ const editingProductId = ref(null);
 
 const productForm = ref({
   name: '',
-  category: 'beverage',
+  barcode: '',
+  category: 'food',
   price: 0,
   stock_quantity: 0,
   is_active: true
@@ -157,6 +164,7 @@ const openProductModal = (product = null) => {
     editingProductId.value = product.id;
     productForm.value = {
       name: product.name,
+      barcode: product.barcode || '',
       category: product.category,
       price: product.price,
       stock_quantity: product.stock_quantity,
@@ -166,7 +174,8 @@ const openProductModal = (product = null) => {
     editingProductId.value = null;
     productForm.value = {
       name: '',
-      category: 'beverage',
+      barcode: '',
+      category: 'food',
       price: 0,
       stock_quantity: 0,
       is_active: true

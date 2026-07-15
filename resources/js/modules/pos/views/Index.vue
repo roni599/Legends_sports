@@ -3,7 +3,8 @@
     <div class="content-header d-flex justify-content-between align-items-center px-4 py-3 border-bottom border-secondary">
       <h3 class="fs-5 m-0 text-light">Point of Sale (POS)</h3>
       <div class="d-flex gap-2">
-        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control custom-input" placeholder="Search products..." style="width: 300px;">
+        <input type="text" v-model="barcodeInput" @keyup.enter="handleBarcodeScan" ref="barcodeField" class="form-control custom-input border-warning" placeholder="Scan Barcode here..." style="width: 200px;">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control custom-input" placeholder="Search products..." style="width: 200px;">
         <select v-model="categoryFilter" @change="fetchProducts" class="form-select custom-input" style="width: 150px;">
           <option value="">All Categories</option>
           <option value="food">Food</option>
@@ -26,6 +27,7 @@
                 <h6 class="card-title fw-bold mb-1">{{ product.name }}</h6>
                 <span class="badge bg-secondary mb-2 mx-auto" style="width: fit-content;">{{ product.category }}</span>
                 <div class="fs-5 text-success fw-bold mb-1">৳{{ product.price }}</div>
+                <small class="text-info mb-1" style="font-size: 0.75rem;">{{ product.barcode || 'No Barcode' }}</small>
                 <small class="text-secondary" v-if="product.stock_quantity > 0">Stock: {{ product.stock_quantity }}</small>
                 <small class="text-danger fw-bold" v-else>Out of Stock</small>
               </div>
@@ -115,7 +117,52 @@
           </div>
         </div>
       </div>
+    <!-- Thermal Receipt Modal (Hidden for printing) -->
+    <div class="d-none">
+      <div id="printReceiptArea" class="bg-white text-dark p-3" style="width: 300px; font-family: monospace;">
+        <div class="text-center mb-3">
+          <h4 class="m-0 fw-bold">Legends Arena</h4>
+          <small>Point of Sale Invoice</small><br>
+          <small>Date: {{ new Date().toLocaleString() }}</small><br>
+          <small v-if="lastInvoiceNo">Invoice: {{ lastInvoiceNo }}</small>
+        </div>
+        
+        <table class="w-100 mb-2 border-top border-bottom border-dark border-dashed">
+          <thead>
+            <tr>
+              <th class="text-start">Item</th>
+              <th class="text-center">Qty</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in printCart" :key="item.product_id">
+              <td class="text-start py-1" style="word-break: break-all;">{{ item.name }}</td>
+              <td class="text-center py-1">{{ item.quantity }}</td>
+              <td class="text-end py-1">৳{{ item.price * item.quantity }}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="d-flex justify-content-between">
+          <span>Subtotal:</span>
+          <span>৳{{ printSubtotal }}</span>
+        </div>
+        <div class="d-flex justify-content-between" v-if="printDiscount > 0">
+          <span>Discount:</span>
+          <span>-৳{{ printDiscount }}</span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold fs-6 mt-1 border-top border-dark">
+          <span>Total:</span>
+          <span>৳{{ printGrandTotal }}</span>
+        </div>
+        
+        <div class="text-center mt-4">
+          <small>Thank you for your purchase!</small>
+        </div>
+      </div>
     </div>
+
   </div>
 </template>
 
@@ -129,9 +176,19 @@ const searchQuery = ref('');
 const categoryFilter = ref('');
 let searchTimeout = null;
 
+const barcodeInput = ref('');
+const barcodeField = ref(null);
+
 const cart = ref([]);
 const discount = ref(0);
 const paidAmount = ref(0);
+
+// Print vars
+const lastInvoiceNo = ref('');
+const printCart = ref([]);
+const printSubtotal = ref(0);
+const printDiscount = ref(0);
+const printGrandTotal = ref(0);
 
 const closePaymentModalBtn = ref(null);
 let bsPaymentModal = null;
@@ -160,6 +217,11 @@ const fetchProducts = async () => {
 onMounted(() => {
   bsPaymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
   fetchProducts();
+  
+  // Auto focus barcode scanner field
+  setTimeout(() => {
+    if (barcodeField.value) barcodeField.value.focus();
+  }, 500);
 });
 
 const handleSearch = () => {
@@ -167,6 +229,27 @@ const handleSearch = () => {
   searchTimeout = setTimeout(() => {
     fetchProducts();
   }, 300);
+};
+
+const handleBarcodeScan = () => {
+  const code = barcodeInput.value.trim();
+  if (!code) return;
+  
+  // Find product by barcode locally
+  const product = products.value.find(p => p.barcode === code);
+  
+  if (product) {
+    addToCart(product);
+  } else {
+    // If not found in current list, maybe search via API (optional)
+    alert(`Product with barcode ${code} not found in active stock.`);
+  }
+  
+  barcodeInput.value = '';
+  // Keep focus on barcode field
+  setTimeout(() => {
+    if (barcodeField.value) barcodeField.value.focus();
+  }, 100);
 };
 
 const addToCart = (product) => {
@@ -231,7 +314,14 @@ const processCheckout = async () => {
       paid: paidAmount.value || 0
     };
     
-    await axios.post('/api/pos/checkout', payload);
+    const response = await axios.post('/api/pos/checkout', payload);
+    
+    // Prepare print data BEFORE clearing cart
+    lastInvoiceNo.value = response.data.invoice?.invoice_number || 'UNKNOWN';
+    printCart.value = [...cart.value];
+    printSubtotal.value = subtotal.value;
+    printDiscount.value = discount.value || 0;
+    printGrandTotal.value = grandTotal.value;
     
     closePaymentModalBtn.value.click();
     cart.value = [];
@@ -241,12 +331,48 @@ const processCheckout = async () => {
     // Refresh products to show updated stock
     fetchProducts();
     
-    alert('Sale completed successfully!');
+    // Print Thermal Receipt
+    printReceipt();
+    
   } catch (error) {
     alert(error.response?.data?.message || 'Failed to complete sale');
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const printReceipt = () => {
+  const printContent = document.getElementById('printReceiptArea').innerHTML;
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Print POS Receipt</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body { width: 300px; margin: 0 auto; font-family: monospace; }
+          .border-dashed { border-style: dashed !important; }
+          @media print {
+            body { width: 100%; margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+  printWindow.focus();
+  
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+    // Refocus barcode scanner after print
+    if (barcodeField.value) barcodeField.value.focus();
+  }, 500);
 };
 </script>
 
