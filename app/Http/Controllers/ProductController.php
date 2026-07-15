@@ -63,7 +63,13 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        $product->delete();
-        return response()->json(null, 204);
+        try {
+            $product->delete();
+            return response()->json(null, 204);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'message' => 'Cannot delete this product because it has been used in purchases or other transactions. Please disable it instead.'
+            ], 422);
+        }
     }
 }
