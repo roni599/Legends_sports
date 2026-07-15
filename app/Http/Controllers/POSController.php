@@ -68,7 +68,7 @@ class POSController extends Controller
             
             // Update Client Due if applicable
             if ($due > 0 && !empty($validated['client_id'])) {
-                $client = \App\Models\Client::find($validated['client_id']);
+                $client = \App\Models\Client::lockForUpdate()->find($validated['client_id']);
                 if ($client) {
                     $client->increment('total_due', $due);
                 }

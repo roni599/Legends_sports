@@ -324,7 +324,7 @@ class BookingController extends Controller
             }
 
             if ($dueAmount > 0) {
-                $client = \App\Models\Client::find($validated['client_id']);
+                $client = \App\Models\Client::lockForUpdate()->find($validated['client_id']);
                 $client->increment('total_due', $dueAmount);
             }
 
