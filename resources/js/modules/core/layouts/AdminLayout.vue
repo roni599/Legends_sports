@@ -37,6 +37,19 @@
           </div>
         </div>
 
+        <!-- Financials Module -->
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_bookings')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#financialMenu" role="button" aria-expanded="false" aria-controls="financialMenu">
+            Financials ▾
+          </a>
+          <div class="collapse" id="financialMenu">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/expenses" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Expenses</router-link>
+              <router-link to="/suppliers" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Suppliers</router-link>
+            </div>
+          </div>
+        </div>
+
         <!-- Ground Module -->
         <div class="nav-item-group" v-if="authStore.hasPermission('view_grounds')">
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#groundMenu" role="button" aria-expanded="false" aria-controls="groundMenu">

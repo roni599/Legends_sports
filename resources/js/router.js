@@ -101,6 +101,12 @@ const routes = [
         name: 'ExpenseList',
         component: () => import('./modules/expenses/views/List.vue'),
         meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'suppliers',
+        name: 'SupplierList',
+        component: () => import('./modules/suppliers/views/List.vue'),
+        meta: { permission: 'manage_bookings' }
       }
     ]
   },
