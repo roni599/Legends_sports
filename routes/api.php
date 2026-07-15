@@ -21,8 +21,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_bookings')->apiResource('expense-categories', App\Http\Controllers\ExpenseCategoryController::class);
     Route::middleware(['permission:view_bookings', App\Http\Middleware\CheckMonthLock::class])->apiResource('expenses', App\Http\Controllers\ExpenseController::class);
 
-    // Suppliers
+    // Suppliers & Purchases
     Route::middleware('permission:view_bookings')->apiResource('suppliers', App\Http\Controllers\SupplierController::class);
+    Route::middleware('permission:view_bookings')->post('suppliers/{supplier}/pay', [App\Http\Controllers\SupplierController::class, 'paySupplier']);
+    Route::middleware(['permission:create_bookings', App\Http\Middleware\CheckMonthLock::class])->apiResource('purchases', App\Http\Controllers\PurchaseController::class);
 
     // POS & Products
     Route::middleware('permission:view_bookings')->apiResource('products', App\Http\Controllers\ProductController::class);

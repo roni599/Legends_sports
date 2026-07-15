@@ -61,4 +61,26 @@ class SupplierController extends Controller
         $supplier->delete();
         return response()->json(null, 204);
     }
+    
+    public function paySupplier(Request $request, Supplier $supplier)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1|max:' . $supplier->balance
+        ]);
+        
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $supplier) {
+            $supplier = Supplier::lockForUpdate()->find($supplier->id);
+            
+            $supplier->decrement('balance', $validated['amount']);
+            
+            \App\Models\Payment::create([
+                'amount' => $validated['amount'],
+                'type' => 'out', // money leaving the business
+                'payment_method' => 'cash',
+                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . time()
+            ]);
+            
+            return response()->json(['message' => 'Payment recorded successfully', 'supplier' => $supplier]);
+        });
+    }
 }
