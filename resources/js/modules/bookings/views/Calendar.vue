@@ -77,6 +77,13 @@
                   </div>
                 </div>
 
+                <!-- Error Box -->
+                <div class="col-12" v-if="priceError">
+                  <div class="alert alert-danger border-0 shadow-sm mb-0 text-sm">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ priceError }}
+                  </div>
+                </div>
+
                 <div class="col-md-6">
                   <label class="form-label fw-bold text-secondary">Discount (৳)</label>
                   <input type="number" v-model="form.discount" class="form-control" min="0" :max="pricePreview?.total_price || 0">
@@ -120,6 +127,7 @@ const selectedSlot = ref(null);
 const fullCalendar = ref(null);
 const isSubmitting = ref(false);
 const pricePreview = ref(null);
+const priceError = ref(null);
 
 const form = ref({
   client_id: '',
@@ -236,6 +244,7 @@ function handleDateSelect(selectInfo) {
 }
 
 const calculatePricePreview = async () => {
+  priceError.value = null;
   if (!form.value.ground_id || !form.value.date || !form.value.start_time || !form.value.end_time) {
     pricePreview.value = null;
     return;
@@ -252,6 +261,7 @@ const calculatePricePreview = async () => {
   } catch (error) {
     console.error('Price calculation failed', error);
     pricePreview.value = null;
+    priceError.value = error.response?.data?.errors?.time_slot?.[0] || 'Invalid time slot selected.';
   }
 };
 
