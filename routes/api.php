@@ -18,6 +18,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
     });
     
+    // Only Admin can manage Users
+    Route::middleware('permission:manage_users')->group(function() {
+        Route::get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
+        Route::apiResource('users', App\Http\Controllers\UserController::class);
+    });
+    
     // Cashier, Manager or Admin can manage Clients and Bookings
     Route::middleware('permission:manage_bookings')->group(function() {
         Route::apiResource('clients', App\Http\Controllers\ClientController::class);
