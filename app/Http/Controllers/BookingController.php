@@ -190,6 +190,19 @@ class BookingController extends Controller
             return response()->json(['message' => 'Ground is not available.'], 422);
         }
 
+        // 1.5. Check Client Credit Limit
+        $clientForCheck = \App\Models\Client::findOrFail($validated['client_id']);
+        if ($clientForCheck->total_due >= 10000) {
+            return response()->json([
+                'errors' => [
+                    'client_id' => [
+                        'This client has exceeded the maximum credit limit (৳10,000). Their current due is ৳' . 
+                        $clientForCheck->total_due . '. Please collect due payments before accepting new bookings.'
+                    ]
+                ]
+            ], 422);
+        }
+
         // 2. Calculate Price
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
