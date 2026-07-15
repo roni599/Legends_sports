@@ -27,57 +27,68 @@ const routes = [
       {
         path: 'clients',
         name: 'ClientList',
-        component: ClientList
+        component: ClientList,
+        meta: { permission: 'manage_bookings' }
       },
       {
         path: 'clients/create',
         name: 'ClientCreate',
-        component: ClientCreate
+        component: ClientCreate,
+        meta: { permission: 'manage_bookings' }
       },
       {
         path: 'clients/:id/edit',
         name: 'ClientEdit',
-        component: () => import('./modules/clients/views/Edit.vue')
+        component: () => import('./modules/clients/views/Edit.vue'),
+        meta: { permission: 'manage_bookings' }
       },
       {
         path: 'grounds',
         name: 'GroundList',
-        component: () => import('./modules/grounds/views/List.vue')
+        component: () => import('./modules/grounds/views/List.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'grounds/create',
         name: 'GroundCreate',
-        component: () => import('./modules/grounds/views/Create.vue')
+        component: () => import('./modules/grounds/views/Create.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'grounds/:id/edit',
         name: 'GroundEdit',
-        component: () => import('./modules/grounds/views/Edit.vue')
+        component: () => import('./modules/grounds/views/Edit.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'grounds/pricing',
         name: 'PricingRuleList',
-        component: () => import('./modules/grounds/views/pricing/List.vue')
+        component: () => import('./modules/grounds/views/pricing/List.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'grounds/pricing/create',
         name: 'PricingRuleCreate',
-        component: () => import('./modules/grounds/views/pricing/Create.vue')
+        component: () => import('./modules/grounds/views/pricing/Create.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'grounds/pricing/:id/edit',
         name: 'PricingRuleEdit',
-        component: () => import('./modules/grounds/views/pricing/Edit.vue')
+        component: () => import('./modules/grounds/views/pricing/Edit.vue'),
+        meta: { permission: 'manage_grounds' }
       },
       {
         path: 'bookings',
         name: 'BookingList',
-        component: () => import('./modules/bookings/views/List.vue')
+        component: () => import('./modules/bookings/views/List.vue'),
+        meta: { permission: 'manage_bookings' }
       },
       {
         path: 'calendar',
         name: 'BookingCalendar',
-        component: () => import('./modules/bookings/views/Calendar.vue')
+        component: () => import('./modules/bookings/views/Calendar.vue'),
+        meta: { permission: 'manage_bookings' }
       }
     ]
   },
@@ -100,6 +111,9 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' });
   } else if (to.meta.guest && authStore.isAuthenticated) {
+    next({ name: 'Dashboard' });
+  } else if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
+    alert('You do not have permission to access this page.');
     next({ name: 'Dashboard' });
   } else {
     next();
