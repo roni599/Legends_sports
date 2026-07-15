@@ -16,6 +16,9 @@ class PermissionMiddleware
     public function handle(Request $request, Closure $next, ...$permissions): Response
     {
         if (!auth()->check()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
             return redirect('login');
         }
 
@@ -27,6 +30,10 @@ class PermissionMiddleware
             }
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Forbidden. You do not have the required permissions.'], 403);
+        }
+        
         abort(403, 'Unauthorized Access - You do not have the right permissions.');
     }
 }

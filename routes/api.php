@@ -12,11 +12,18 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user()->load('roles.permissions');
     });
 
-    Route::apiResource('clients', App\Http\Controllers\ClientController::class);
-    Route::apiResource('grounds', App\Http\Controllers\GroundController::class);
-    Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
+    // Only Manager or Admin can manage Grounds and Pricing Rules
+    Route::middleware('permission:manage_grounds')->group(function() {
+        Route::apiResource('grounds', App\Http\Controllers\GroundController::class);
+        Route::apiResource('pricing-rules', App\Http\Controllers\PricingRuleController::class);
+    });
     
-    Route::post('bookings/check-availability', [App\Http\Controllers\BookingController::class, 'checkAvailability']);
-    Route::post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
-    Route::apiResource('bookings', App\Http\Controllers\BookingController::class);
+    // Cashier, Manager or Admin can manage Clients and Bookings
+    Route::middleware('permission:manage_bookings')->group(function() {
+        Route::apiResource('clients', App\Http\Controllers\ClientController::class);
+        
+        Route::post('bookings/check-availability', [App\Http\Controllers\BookingController::class, 'checkAvailability']);
+        Route::post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
+        Route::apiResource('bookings', App\Http\Controllers\BookingController::class);
+    });
 });

@@ -16,6 +16,9 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         if (!auth()->check()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
             return redirect('login');
         }
 
@@ -27,6 +30,10 @@ class RoleMiddleware
             }
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Forbidden. You do not have the required roles.'], 403);
+        }
+        
         abort(403, 'Unauthorized Access - You do not have the right roles.');
     }
 }
