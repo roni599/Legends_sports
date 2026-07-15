@@ -32,10 +32,16 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <label class="form-label fw-bold text-secondary">Select Client</label>
-                  <select v-model="form.client_id" class="form-select" required>
-                    <option value="">-- Choose Client --</option>
-                    <option v-for="client in clients" :key="client.id" :value="client.id">{{ client.name }} ({{ client.phone }})</option>
-                  </select>
+                  <VueMultiselect
+                    v-model="selectedClientObj"
+                    :options="clients"
+                    :custom-label="clientLabel"
+                    track-by="id"
+                    placeholder="-- Search Client --"
+                    :searchable="true"
+                    :allow-empty="false"
+                  >
+                  </VueMultiselect>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-bold text-secondary">Select Ground</label>
@@ -110,16 +116,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const grounds = ref([]);
 const activeGrounds = ref([]);
 const clients = ref([]);
+const selectedClientObj = ref(null);
 const selectedGround = ref('');
 const bookings = ref([]);
 const showModal = ref(false);
@@ -242,6 +251,14 @@ function handleDateSelect(selectInfo) {
   showModal.value = true;
   selectInfo.view.calendar.unselect();
 }
+
+const clientLabel = (client) => {
+  return `${client.name} (${client.phone})`;
+};
+
+watch(selectedClientObj, (newVal) => {
+  form.value.client_id = newVal ? newVal.id : '';
+});
 
 const calculatePricePreview = async () => {
   priceError.value = null;
