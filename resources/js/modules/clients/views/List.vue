@@ -46,6 +46,7 @@
               <td>{{ client.email || '-' }}</td>
               <td :class="{'text-danger fw-bold': client.total_due > 0}">{{ client.total_due }}</td>
               <td>
+                <button @click="openLedger(client)" class="btn btn-sm btn-warning me-2 text-dark fw-bold">Ledger</button>
                 <router-link :to="`/clients/${client.id}/edit`" class="btn btn-sm btn-outline-info me-2">Edit</router-link>
                 <button @click="clientStore.deleteClient(client.id)" class="btn btn-sm btn-outline-danger">Delete</button>
               </td>
@@ -63,6 +64,63 @@
         </div>
       </div>
     </div>
+
+    <!-- Ledger Modal -->
+    <div class="modal fade" id="ledgerModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light border-secondary">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title">Financial Ledger: {{ selectedClient?.name }}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0">
+            <div class="p-3 bg-secondary bg-opacity-25 border-bottom border-secondary d-flex justify-content-between">
+              <div><strong>Total Bookings:</strong> {{ clientLedger.length }}</div>
+              <div><strong class="text-danger">Total Due:</strong> ৳ {{ selectedClient?.total_due }}</div>
+            </div>
+            
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-dark table-striped table-hover mb-0 text-sm">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Ground</th>
+                    <th>Status</th>
+                    <th class="text-end">Total Amount</th>
+                    <th class="text-end">Paid</th>
+                    <th class="text-end">Due</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="isLoadingLedger">
+                    <td colspan="6" class="text-center py-4">Loading ledger...</td>
+                  </tr>
+                  <tr v-else-if="clientLedger.length === 0">
+                    <td colspan="6" class="text-center py-4">No booking history found</td>
+                  </tr>
+                  <tr v-else v-for="booking in clientLedger" :key="booking.id">
+                    <td>{{ new Date(booking.created_at).toLocaleDateString() }}</td>
+                    <td>{{ booking.ground.name }}</td>
+                    <td>
+                      <span class="badge" :class="booking.status === 'completed' ? 'bg-success' : (booking.status === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark')">
+                        {{ booking.status }}
+                      </span>
+                    </td>
+                    <td class="text-end">৳ {{ booking.total_amount }}</td>
+                    <td class="text-end text-success">৳ {{ booking.paid_amount }}</td>
+                    <td class="text-end" :class="{'text-danger fw-bold': booking.due_amount > 0}">৳ {{ booking.due_amount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -87,5 +145,32 @@ const handleSearch = () => {
 
 const changePage = (page) => {
   clientStore.fetchClients(page, searchQuery.value);
+};
+
+// Ledger Logic
+import axios from 'axios';
+const selectedClient = ref(null);
+const clientLedger = ref([]);
+const isLoadingLedger = ref(false);
+let bsLedgerModal = null;
+
+onMounted(() => {
+  bsLedgerModal = new bootstrap.Modal(document.getElementById('ledgerModal'));
+});
+
+const openLedger = async (client) => {
+  selectedClient.value = client;
+  clientLedger.value = [];
+  bsLedgerModal.show();
+  isLoadingLedger.value = true;
+  
+  try {
+    const response = await axios.get(`/api/clients/${client.id}/ledger`);
+    clientLedger.value = response.data.ledger;
+  } catch (error) {
+    alert('Failed to load ledger data.');
+  } finally {
+    isLoadingLedger.value = false;
+  }
 };
 </script>
