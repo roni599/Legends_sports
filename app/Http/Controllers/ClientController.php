@@ -70,10 +70,45 @@ class ClientController extends Controller
             ->where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
+            
+        $payments = \App\Models\Payment::where('client_id', $client->id)
+            ->where('type', 'in')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'client' => $client,
-            'ledger' => $bookings
+            'ledger' => $bookings,
+            'payments' => $payments
         ]);
+    }
+
+    public function receiveDuePayment(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'payment_method' => 'required|string|in:cash,bkash,bank,card'
+        ]);
+
+        if ($validated['amount'] > $client->total_due) {
+            return response()->json(['message' => 'Payment amount cannot exceed the total due.'], 422);
+        }
+
+        DB::transaction(function () use ($client, $validated) {
+            // Create Payment record
+            \App\Models\Payment::create([
+                'client_id' => $client->id,
+                'amount' => $validated['amount'],
+                'type' => 'in',
+                'payment_method' => $validated['payment_method'],
+                'transaction_id' => 'DUE-' . time()
+            ]);
+
+            // Reduce total_due
+            $client->total_due -= $validated['amount'];
+            $client->save();
+        });
+
+        return response()->json(['message' => 'Due payment received successfully.', 'client' => $client]);
     }
 }

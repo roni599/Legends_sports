@@ -74,44 +74,120 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-0">
-            <div class="p-3 bg-secondary bg-opacity-25 border-bottom border-secondary d-flex justify-content-between">
+            <div class="p-3 bg-secondary bg-opacity-25 border-bottom border-secondary d-flex justify-content-between align-items-center">
               <div><strong>Total Bookings:</strong> {{ clientLedger.length }}</div>
-              <div><strong class="text-danger">Total Due:</strong> ৳ {{ selectedClient?.total_due }}</div>
+              <div class="d-flex align-items-center gap-3">
+                <span class="fs-5"><strong class="text-danger">Total Due:</strong> ৳ {{ selectedClient?.total_due }}</span>
+                <button v-if="selectedClient?.total_due > 0" @click="showPaymentForm = !showPaymentForm" class="btn btn-sm btn-success fw-bold">
+                  {{ showPaymentForm ? 'Cancel Payment' : 'Receive Due' }}
+                </button>
+              </div>
             </div>
             
-            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-              <table class="table table-dark table-striped table-hover mb-0 text-sm">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Ground</th>
-                    <th>Status</th>
-                    <th class="text-end">Total Amount</th>
-                    <th class="text-end">Paid</th>
-                    <th class="text-end">Due</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="isLoadingLedger">
-                    <td colspan="6" class="text-center py-4">Loading ledger...</td>
-                  </tr>
-                  <tr v-else-if="clientLedger.length === 0">
-                    <td colspan="6" class="text-center py-4">No booking history found</td>
-                  </tr>
-                  <tr v-else v-for="booking in clientLedger" :key="booking.id">
-                    <td>{{ new Date(booking.created_at).toLocaleDateString() }}</td>
-                    <td>{{ booking.ground.name }}</td>
-                    <td>
-                      <span class="badge" :class="booking.status === 'completed' ? 'bg-success' : (booking.status === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark')">
-                        {{ booking.status }}
-                      </span>
-                    </td>
-                    <td class="text-end">৳ {{ booking.total_amount }}</td>
-                    <td class="text-end text-success">৳ {{ booking.paid_amount }}</td>
-                    <td class="text-end" :class="{'text-danger fw-bold': booking.due_amount > 0}">৳ {{ booking.due_amount }}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <!-- Receive Payment Form -->
+            <div v-if="showPaymentForm" class="p-3 bg-light text-dark border-bottom border-secondary">
+              <h6 class="fw-bold mb-3">Receive Due Payment</h6>
+              <form @submit.prevent="submitDuePayment" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label text-sm fw-bold">Amount (৳)</label>
+                  <input type="number" v-model.number="paymentForm.amount" class="form-control form-control-sm" :max="selectedClient?.total_due" min="1" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label text-sm fw-bold">Payment Method</label>
+                  <select v-model="paymentForm.payment_method" class="form-select form-select-sm" required>
+                    <option value="cash">Cash</option>
+                    <option value="bkash">bKash</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="card">Card</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <button type="submit" class="btn btn-success btn-sm w-100 fw-bold" :disabled="isSubmittingPayment">
+                    <span v-if="isSubmittingPayment" class="spinner-border spinner-border-sm me-1"></span>
+                    Confirm Payment
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- Tabs for Ledger / Payments -->
+            <ul class="nav nav-tabs nav-fill bg-dark border-bottom-0" id="ledgerTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active text-light bg-dark border-0 rounded-0 border-bottom border-primary" id="bookings-tab" data-bs-toggle="tab" data-bs-target="#bookings" type="button" role="tab">Booking History</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link text-light bg-dark border-0 rounded-0" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">Due Collections</button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="ledgerTabsContent">
+              <!-- Bookings Tab -->
+              <div class="tab-pane fade show active" id="bookings" role="tabpanel">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-dark table-striped table-hover mb-0 text-sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Ground</th>
+                        <th>Status</th>
+                        <th class="text-end">Total Amount</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Due</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingLedger">
+                        <td colspan="6" class="text-center py-4">Loading bookings...</td>
+                      </tr>
+                      <tr v-else-if="clientLedger.length === 0">
+                        <td colspan="6" class="text-center py-4">No booking history found</td>
+                      </tr>
+                      <tr v-else v-for="booking in clientLedger" :key="booking.id">
+                        <td>{{ new Date(booking.created_at).toLocaleDateString() }}</td>
+                        <td>{{ booking.ground.name }}</td>
+                        <td>
+                          <span class="badge" :class="booking.status === 'completed' ? 'bg-success' : (booking.status === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark')">
+                            {{ booking.status }}
+                          </span>
+                        </td>
+                        <td class="text-end">৳ {{ booking.total_amount }}</td>
+                        <td class="text-end text-success">৳ {{ booking.paid_amount }}</td>
+                        <td class="text-end" :class="{'text-danger fw-bold': booking.due_amount > 0}">৳ {{ booking.due_amount }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Payments Tab -->
+              <div class="tab-pane fade" id="payments" role="tabpanel">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-dark table-striped table-hover mb-0 text-sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Transaction ID</th>
+                        <th>Method</th>
+                        <th class="text-end text-success">Amount Received</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingLedger">
+                        <td colspan="4" class="text-center py-4">Loading payments...</td>
+                      </tr>
+                      <tr v-else-if="clientPayments.length === 0">
+                        <td colspan="4" class="text-center py-4">No due collections found</td>
+                      </tr>
+                      <tr v-else v-for="payment in clientPayments" :key="payment.id">
+                        <td>{{ new Date(payment.created_at).toLocaleString() }}</td>
+                        <td>{{ payment.transaction_id }}</td>
+                        <td class="text-uppercase">{{ payment.payment_method }}</td>
+                        <td class="text-end fw-bold text-success">৳ {{ payment.amount }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer border-secondary">
@@ -151,8 +227,17 @@ const changePage = (page) => {
 import axios from 'axios';
 const selectedClient = ref(null);
 const clientLedger = ref([]);
+const clientPayments = ref([]);
 const isLoadingLedger = ref(false);
 let bsLedgerModal = null;
+
+// Payment Form Logic
+const showPaymentForm = ref(false);
+const isSubmittingPayment = ref(false);
+const paymentForm = ref({
+  amount: 0,
+  payment_method: 'cash'
+});
 
 onMounted(() => {
   bsLedgerModal = new bootstrap.Modal(document.getElementById('ledgerModal'));
@@ -161,16 +246,47 @@ onMounted(() => {
 const openLedger = async (client) => {
   selectedClient.value = client;
   clientLedger.value = [];
+  clientPayments.value = [];
+  showPaymentForm.value = false;
+  paymentForm.value.amount = client.total_due;
   bsLedgerModal.show();
   isLoadingLedger.value = true;
   
   try {
     const response = await axios.get(`/api/clients/${client.id}/ledger`);
     clientLedger.value = response.data.ledger;
+    clientPayments.value = response.data.payments;
   } catch (error) {
     alert('Failed to load ledger data.');
   } finally {
     isLoadingLedger.value = false;
+  }
+};
+
+const submitDuePayment = async () => {
+  if (!selectedClient.value) return;
+  isSubmittingPayment.value = true;
+  try {
+    const response = await axios.post(`/api/clients/${selectedClient.value.id}/receive-payment`, paymentForm.value);
+    selectedClient.value = response.data.client;
+    
+    // Update main client list visually
+    const idx = clientStore.clients.findIndex(c => c.id === selectedClient.value.id);
+    if (idx !== -1) {
+      clientStore.clients[idx].total_due = selectedClient.value.total_due;
+    }
+    
+    // Refresh ledger arrays
+    const ledgerRes = await axios.get(`/api/clients/${selectedClient.value.id}/ledger`);
+    clientLedger.value = ledgerRes.data.ledger;
+    clientPayments.value = ledgerRes.data.payments;
+    
+    showPaymentForm.value = false;
+    alert('Payment received successfully!');
+  } catch (error) {
+    alert(error.response?.data?.message || 'Failed to process payment.');
+  } finally {
+    isSubmittingPayment.value = false;
   }
 };
 </script>
