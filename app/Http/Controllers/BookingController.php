@@ -40,7 +40,7 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'ground_id' => 'required|exists:grounds,id',
-            'date' => 'required|date',
+            'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'exclude_booking_id' => 'nullable|exists:bookings,id'
@@ -88,7 +88,7 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'ground_id' => 'required|exists:grounds,id',
-            'date' => 'required|date',
+            'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
         ]);
@@ -175,7 +175,7 @@ class BookingController extends Controller
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'ground_id' => 'required|exists:grounds,id',
-            'date' => 'required|date',
+            'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'discount' => 'nullable|numeric|min:0',
