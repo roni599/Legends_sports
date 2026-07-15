@@ -59,6 +59,7 @@
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/expenses" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Expenses</router-link>
               <router-link to="/suppliers" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Suppliers</router-link>
+              <router-link to="/purchases" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Purchases</router-link>
               <router-link to="/month-closing" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Month Closing</router-link>
             </div>
           </div>

@@ -121,6 +121,12 @@ const routes = [
         meta: { permission: 'manage_bookings' }
       },
       {
+        path: 'purchases',
+        name: 'PurchaseList',
+        component: () => import('./modules/purchases/views/List.vue'),
+        meta: { permission: 'manage_bookings' }
+      },
+      {
         path: 'month-closing',
         name: 'MonthClosing',
         component: () => import('./modules/accounting/views/MonthClosing.vue'),
