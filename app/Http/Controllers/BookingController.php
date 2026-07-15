@@ -319,6 +319,7 @@ class BookingController extends Controller
         $validated = $request->validate([
             'status' => 'nullable|in:pending,confirmed,running,completed,cancelled,no_show',
             'additional_payment' => 'nullable|numeric|min:0',
+            'refund_amount' => 'nullable|numeric|min:0'
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $booking) {
@@ -327,11 +328,19 @@ class BookingController extends Controller
                                         $validated['status'] === 'cancelled' && 
                                         $booking->status !== 'cancelled';
 
-            // 1. Handle Cancellation
+            // 1. Handle Cancellation and Refund
             if ($statusChangedToCancelled) {
                 if (in_array($booking->status, ['running', 'completed'])) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'status' => ['Cannot cancel a booking that is already running or completed to preserve accounting integrity.']
+                    ]);
+                }
+
+                $refundAmount = $validated['refund_amount'] ?? 0;
+                
+                if ($refundAmount > $booking->paid_amount) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'refund_amount' => ['Refund cannot exceed the previously paid amount of ' . $booking->paid_amount]
                     ]);
                 }
 
@@ -342,7 +351,8 @@ class BookingController extends Controller
                 
                 $booking->update([
                     'status' => 'cancelled',
-                    'due_amount' => 0 // Due is forgiven on cancellation
+                    'due_amount' => 0, // Due is forgiven on cancellation
+                    'refund_amount' => $refundAmount
                 ]);
                 
                 // Update slots status to blocked/cancelled so they free up
