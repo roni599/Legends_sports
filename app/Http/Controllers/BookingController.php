@@ -326,6 +326,12 @@ class BookingController extends Controller
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $booking) {
+            if ($booking->status === 'cancelled') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => ['A cancelled booking cannot be modified or restored. Please create a new booking.']
+                ]);
+            }
+            
             $client = \App\Models\Client::find($booking->client_id);
             $statusChangedToCancelled = isset($validated['status']) && 
                                         $validated['status'] === 'cancelled' && 
