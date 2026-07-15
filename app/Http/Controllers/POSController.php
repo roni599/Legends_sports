@@ -24,9 +24,14 @@ class POSController extends Controller
         return DB::transaction(function () use ($validated) {
             $subtotal = 0;
             
-            // Validate stock and calculate subtotal
+            // Validate stock, active status, and calculate subtotal
             foreach ($validated['cart'] as $item) {
                 $product = Product::lockForUpdate()->find($item['product_id']);
+                
+                if (!$product->is_active) {
+                    throw new \Exception("Product '{$product->name}' is currently disabled and cannot be sold.");
+                }
+                
                 if ($product->stock_quantity < $item['quantity']) {
                     throw new \Exception("Not enough stock for {$product->name}");
                 }
@@ -34,6 +39,11 @@ class POSController extends Controller
             }
             
             $discount = $validated['discount'] ?? 0;
+            
+            if ($discount > $subtotal) {
+                throw new \Exception("Discount (৳{$discount}) cannot exceed the subtotal (৳{$subtotal}).");
+            }
+            
             $grandTotal = max(0, $subtotal - $discount);
             $paid = $validated['paid'];
             

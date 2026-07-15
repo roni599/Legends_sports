@@ -55,11 +55,18 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier)
     {
-        if ($supplier->balance > 0) {
-            return response()->json(['message' => 'Cannot delete a supplier with an outstanding balance.'], 422);
+        if ($supplier->balance != 0) {
+            return response()->json(['message' => 'Cannot delete a supplier with an outstanding or advance balance.'], 422);
         }
-        $supplier->delete();
-        return response()->json(null, 204);
+        
+        try {
+            $supplier->delete();
+            return response()->json(null, 204);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'message' => 'Cannot delete this supplier because they have associated purchases or transaction history.'
+            ], 422);
+        }
     }
     
     public function paySupplier(Request $request, Supplier $supplier)
