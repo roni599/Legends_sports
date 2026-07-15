@@ -68,6 +68,16 @@ const routes = [
         path: 'grounds/pricing/:id/edit',
         name: 'PricingRuleEdit',
         component: () => import('./modules/grounds/views/pricing/Edit.vue')
+      },
+      {
+        path: 'bookings',
+        name: 'BookingList',
+        component: () => import('./modules/bookings/views/List.vue')
+      },
+      {
+        path: 'calendar',
+        name: 'BookingCalendar',
+        component: () => import('./modules/bookings/views/Calendar.vue')
       }
     ]
   }
