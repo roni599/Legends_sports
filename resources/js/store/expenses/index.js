@@ -62,12 +62,44 @@ export const useExpenseStore = defineStore('expenses', {
         alert(error.response?.data?.message || 'Failed to delete category');
       }
     },
+    
+    async updateCategory(id, name) {
+      this.loading = true;
+      try {
+        const response = await axios.put(`/api/expense-categories/${id}`, { name });
+        const index = this.categories.findIndex(c => c.id === id);
+        if (index !== -1) {
+          this.categories[index] = response.data;
+        }
+        return response.data;
+      } catch (error) {
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
 
     async addExpense(expenseData) {
       this.loading = true;
       try {
         const response = await axios.post('/api/expenses', expenseData);
         this.expenses.unshift(response.data);
+        return response.data;
+      } catch (error) {
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async updateExpense(id, expenseData) {
+      this.loading = true;
+      try {
+        const response = await axios.put(`/api/expenses/${id}`, expenseData);
+        const index = this.expenses.findIndex(e => e.id === id);
+        if (index !== -1) {
+          this.expenses[index] = response.data;
+        }
         return response.data;
       } catch (error) {
         throw error;

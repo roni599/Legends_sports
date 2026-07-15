@@ -7,7 +7,7 @@
         <button class="btn btn-warning btn-sm text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#categoriesModal">
           Manage Categories
         </button>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#expenseModal">
+        <button class="btn btn-primary btn-sm" @click="openExpenseModal(null)">
           + Add Expense
         </button>
       </div>
@@ -38,6 +38,7 @@
               <td>{{ expense.description || '-' }}</td>
               <td class="text-end text-danger fw-bold">{{ expense.amount }}</td>
               <td class="text-end">
+                <button @click="openExpenseModal(expense)" class="btn btn-sm btn-outline-info me-2">Edit</button>
                 <button @click="expenseStore.deleteExpense(expense.id)" class="btn btn-sm btn-outline-danger">Delete</button>
               </td>
             </tr>
@@ -60,7 +61,7 @@
       <div class="modal-dialog">
         <div class="modal-content bg-dark text-light border-secondary">
           <div class="modal-header border-secondary">
-            <h5 class="modal-title">Add New Expense</h5>
+            <h5 class="modal-title">{{ editingExpenseId ? 'Edit Expense' : 'Add New Expense' }}</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form @submit.prevent="submitExpense">
@@ -89,7 +90,7 @@
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" ref="closeExpenseModalBtn">Close</button>
               <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
-                Save Expense
+                {{ editingExpenseId ? 'Update' : 'Save' }} Expense
               </button>
             </div>
           </form>
@@ -107,14 +108,18 @@
           </div>
           <div class="modal-body">
             <form @submit.prevent="submitCategory" class="d-flex gap-2 mb-4">
-              <input type="text" v-model="newCategoryName" class="form-control custom-input" placeholder="New category name..." required>
-              <button type="submit" class="btn btn-success" :disabled="isSubmittingCat">Add</button>
+              <input type="text" v-model="newCategoryName" class="form-control custom-input" placeholder="Category name..." required>
+              <button type="submit" class="btn btn-success" :disabled="isSubmittingCat">{{ editingCatId ? 'Update' : 'Add' }}</button>
+              <button v-if="editingCatId" type="button" class="btn btn-secondary" @click="cancelEditCat">Cancel</button>
             </form>
             
             <ul class="list-group list-group-flush">
               <li v-for="cat in expenseStore.categories" :key="cat.id" class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
                 {{ cat.name }}
-                <button @click="expenseStore.deleteCategory(cat.id)" class="btn btn-sm btn-outline-danger">X</button>
+                <div>
+                  <button @click="editCategory(cat)" class="btn btn-sm btn-outline-info me-2">Edit</button>
+                  <button @click="expenseStore.deleteCategory(cat.id)" class="btn btn-sm btn-outline-danger">X</button>
+                </div>
               </li>
               <li v-if="expenseStore.categories.length === 0" class="list-group-item bg-transparent text-secondary border-0 text-center">No categories found</li>
             </ul>
@@ -135,9 +140,12 @@ let searchTimeout = null;
 
 // Modals state
 const closeExpenseModalBtn = ref(null);
+let bsExpenseModal = null;
 const isSubmitting = ref(false);
 const isSubmittingCat = ref(false);
 const newCategoryName = ref('');
+const editingCatId = ref(null);
+const editingExpenseId = ref(null);
 
 const expenseForm = ref({
   expense_category_id: '',
@@ -147,6 +155,7 @@ const expenseForm = ref({
 });
 
 onMounted(() => {
+  bsExpenseModal = new bootstrap.Modal(document.getElementById('expenseModal'));
   expenseStore.fetchExpenses();
   expenseStore.fetchCategories();
 });
@@ -162,31 +171,63 @@ const changePage = (page) => {
   expenseStore.fetchExpenses(page, searchQuery.value);
 };
 
+const editCategory = (cat) => {
+  editingCatId.value = cat.id;
+  newCategoryName.value = cat.name;
+};
+
+const cancelEditCat = () => {
+  editingCatId.value = null;
+  newCategoryName.value = '';
+};
+
 const submitCategory = async () => {
   if (!newCategoryName.value) return;
   isSubmittingCat.value = true;
   try {
-    await expenseStore.addCategory(newCategoryName.value);
-    newCategoryName.value = '';
+    if (editingCatId.value) {
+      await expenseStore.updateCategory(editingCatId.value, newCategoryName.value);
+    } else {
+      await expenseStore.addCategory(newCategoryName.value);
+    }
+    cancelEditCat();
   } catch (error) {
-    alert(error.response?.data?.message || 'Failed to add category');
+    alert(error.response?.data?.message || 'Failed to save category');
   } finally {
     isSubmittingCat.value = false;
   }
 };
 
-const submitExpense = async () => {
-  isSubmitting.value = true;
-  try {
-    await expenseStore.addExpense(expenseForm.value);
-    closeExpenseModalBtn.value.click();
-    // Reset form
+const openExpenseModal = (expense = null) => {
+  if (expense) {
+    editingExpenseId.value = expense.id;
+    expenseForm.value = {
+      expense_category_id: expense.expense_category_id,
+      amount: expense.amount,
+      date: expense.date,
+      description: expense.description || ''
+    };
+  } else {
+    editingExpenseId.value = null;
     expenseForm.value = {
       expense_category_id: '',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       description: ''
     };
+  }
+  bsExpenseModal.show();
+};
+
+const submitExpense = async () => {
+  isSubmitting.value = true;
+  try {
+    if (editingExpenseId.value) {
+      await expenseStore.updateExpense(editingExpenseId.value, expenseForm.value);
+    } else {
+      await expenseStore.addExpense(expenseForm.value);
+    }
+    closeExpenseModalBtn.value.click();
   } catch (error) {
     alert(error.response?.data?.message || 'Failed to save expense');
   } finally {
