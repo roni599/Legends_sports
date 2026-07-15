@@ -95,7 +95,10 @@
                 </span>
               </td>
               <td class="text-end pe-4">
-                <button class="btn btn-sm btn-outline-primary me-2" @click="openManageModal(booking)">
+                <button class="btn btn-sm btn-outline-secondary me-2" @click="printInvoice(booking.id)">
+                  <i class="bi bi-printer"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" @click="openManageModal(booking)">
                   Manage
                 </button>
               </td>
@@ -321,6 +324,10 @@ const getStatusBadgeClass = (status) => {
 onMounted(() => {
   fetchBookings();
 });
+
+const printInvoice = (id) => {
+  window.open(`/print-invoice/${id}`, '_blank', 'width=800,height=600');
+};
 </script>
 
 <style scoped>

@@ -80,6 +80,12 @@ const routes = [
         component: () => import('./modules/bookings/views/Calendar.vue')
       }
     ]
+  },
+  {
+    path: '/print-invoice/:id',
+    name: 'PrintInvoice',
+    component: () => import('./modules/bookings/views/PrintInvoice.vue'),
+    meta: { requiresAuth: true }
   }
 ];
 
