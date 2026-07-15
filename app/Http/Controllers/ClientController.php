@@ -63,4 +63,17 @@ class ClientController extends Controller
         $client->delete();
         return response()->json(null, 204);
     }
+
+    public function ledger(Client $client)
+    {
+        $bookings = \App\Models\Booking::with(['ground', 'slots'])
+            ->where('client_id', $client->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'client' => $client,
+            'ledger' => $bookings
+        ]);
+    }
 }

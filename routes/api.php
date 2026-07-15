@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_clients')->get('clients', [App\Http\Controllers\ClientController::class, 'index']);
     Route::middleware('permission:create_clients')->post('clients', [App\Http\Controllers\ClientController::class, 'store']);
     Route::middleware('permission:view_clients')->get('clients/{client}', [App\Http\Controllers\ClientController::class, 'show']);
+    Route::middleware('permission:view_clients')->get('clients/{client}/ledger', [App\Http\Controllers\ClientController::class, 'ledger']);
     Route::middleware('permission:edit_clients')->put('clients/{client}', [App\Http\Controllers\ClientController::class, 'update']);
     Route::middleware('permission:delete_clients')->delete('clients/{client}', [App\Http\Controllers\ClientController::class, 'destroy']);
 
