@@ -26,12 +26,10 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|unique:clients,phone',
             'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'total_due' => 'nullable|numeric'
+            'address' => 'nullable|string'
         ]);
 
-        $validated['total_due'] = $validated['total_due'] ?? 0;
-
+        // total_due is automatically set to 0 by database default or logic, should not be manually passed.
         $client = Client::create($validated);
         return response()->json($client, 201);
     }
@@ -47,11 +45,8 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|unique:clients,phone,' . $client->id,
             'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'total_due' => 'nullable|numeric'
+            'address' => 'nullable|string'
         ]);
-
-        $validated['total_due'] = $validated['total_due'] ?? 0;
 
         $client->update($validated);
         return response()->json($client);
