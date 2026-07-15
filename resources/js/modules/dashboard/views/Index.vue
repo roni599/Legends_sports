@@ -215,10 +215,9 @@ const fetchDashboardData = async () => {
     kpi.value.totalDue = parseFloat(stats.total_due || 0).toLocaleString();
     kpi.value.activeGrounds = stats.active_bookings;
 
-    // We don't have these exact counts in the new backend, so hide or mock them
-    kpi.value.todayBookings = '-';
-    kpi.value.monthlyBookings = '-';
-    kpi.value.dueClientsCount = '-';
+    kpi.value.todayBookings = stats.today_bookings;
+    kpi.value.monthlyBookings = stats.monthly_bookings;
+    kpi.value.dueClientsCount = stats.due_clients_count;
 
     recentBookings.value = bookingsRes.data.data ? bookingsRes.data.data.slice(0, 5) : [];
 

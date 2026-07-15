@@ -30,10 +30,23 @@ class DashboardController extends Controller
                 $q->where('date', '>=', $today->format('Y-m-d'));
             })->count();
 
+        $todayBookings = Booking::whereDate('created_at', $today)
+            ->whereNotIn('status', ['cancelled'])
+            ->count();
+
+        $monthlyBookings = Booking::whereBetween('created_at', [$startOfMonth, Carbon::now()])
+            ->whereNotIn('status', ['cancelled'])
+            ->count();
+
+        $dueClientsCount = Client::where('total_due', '>', 0)->count();
+
         return response()->json([
             'today_revenue' => $todayRevenue,
+            'today_bookings' => $todayBookings,
             'monthly_revenue' => $monthlyRevenue,
+            'monthly_bookings' => $monthlyBookings,
             'total_due' => $totalDue,
+            'due_clients_count' => $dueClientsCount,
             'active_bookings' => $activeBookingsCount
         ]);
     }
