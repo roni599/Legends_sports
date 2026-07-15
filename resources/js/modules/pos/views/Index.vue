@@ -99,9 +99,10 @@
             <h3 class="text-success mb-4">Total: ৳{{ grandTotal }}</h3>
             
             <div class="mb-3 text-start">
-              <label class="form-label">Customer (Optional)</label>
+              <label class="form-label">Customer / Client *</label>
               <select v-model="selectedClientId" class="form-select custom-input py-2">
-                <option value="">Walk-in Customer</option>
+                <option value="" disabled>-- Select Customer --</option>
+                <option value="walk_in">Walk-in Customer</option>
                 <option v-for="client in clients" :key="client.id" :value="client.id">
                   {{ client.name }} ({{ client.phone }})
                 </option>
@@ -120,7 +121,7 @@
           </div>
           <div class="modal-footer border-secondary">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" ref="closePaymentModalBtn">Cancel</button>
-            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0 || (changeAmount < 0 && !selectedClientId)">
+            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0 || selectedClientId === '' || (changeAmount < 0 && selectedClientId === 'walk_in')">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
               Confirm Sale
             </button>
@@ -335,7 +336,7 @@ const processCheckout = async () => {
       })),
       discount: discount.value || 0,
       paid: paidAmount.value || 0,
-      client_id: selectedClientId.value || null
+      client_id: selectedClientId.value === 'walk_in' ? null : selectedClientId.value
     };
     
     const response = await axios.post('/api/pos/checkout', payload);
