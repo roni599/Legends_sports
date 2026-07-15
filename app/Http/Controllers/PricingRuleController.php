@@ -35,6 +35,27 @@ class PricingRuleController extends Controller
             'status' => 'required|in:active,inactive'
         ]);
 
+        // Business Logic: Prevent overlapping peak_hour rules for the same ground
+        if ($validated['type'] === 'peak_hour') {
+            $overlapping = PricingRule::where('type', 'peak_hour')
+                ->where('status', 'active')
+                ->where(function($q) use ($validated) {
+                    $q->where('ground_id', $validated['ground_id'])
+                      ->orWhereNull('ground_id');
+                })
+                ->where(function ($q) use ($validated) {
+                    $q->where('start_time', '<', $validated['end_time'])
+                      ->where('end_time', '>', $validated['start_time']);
+                })
+                ->exists();
+
+            if ($overlapping) {
+                return response()->json([
+                    'message' => 'An active peak hour rule already exists for this time period. Overlapping peak rules are not allowed as they cause double-charging.'
+                ], 422);
+            }
+        }
+
         $rule = PricingRule::create($validated);
         return response()->json($rule, 201);
     }
@@ -55,6 +76,28 @@ class PricingRuleController extends Controller
             'price_modifier' => 'required|numeric',
             'status' => 'required|in:active,inactive'
         ]);
+
+        // Business Logic: Prevent overlapping peak_hour rules for the same ground
+        if ($validated['type'] === 'peak_hour') {
+            $overlapping = PricingRule::where('type', 'peak_hour')
+                ->where('id', '!=', $pricingRule->id)
+                ->where('status', 'active')
+                ->where(function($q) use ($validated) {
+                    $q->where('ground_id', $validated['ground_id'])
+                      ->orWhereNull('ground_id');
+                })
+                ->where(function ($q) use ($validated) {
+                    $q->where('start_time', '<', $validated['end_time'])
+                      ->where('end_time', '>', $validated['start_time']);
+                })
+                ->exists();
+
+            if ($overlapping) {
+                return response()->json([
+                    'message' => 'An active peak hour rule already exists for this time period. Overlapping peak rules are not allowed as they cause double-charging.'
+                ], 422);
+            }
+        }
 
         $pricingRule->update($validated);
         return response()->json($pricingRule);
