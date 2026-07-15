@@ -306,6 +306,12 @@ class BookingController extends Controller
 
     public function destroy(Booking $booking)
     {
+        if (in_array($booking->status, ['running', 'completed'])) {
+            return response()->json([
+                'message' => 'Cannot delete a running or completed booking to preserve accounting integrity.'
+            ], 422);
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
             // Reverse the due amount from the client's ledger if the booking is not already cancelled
             if ($booking->status !== 'cancelled' && $booking->due_amount > 0) {
