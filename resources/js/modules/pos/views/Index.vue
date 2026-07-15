@@ -61,6 +61,17 @@
         </div>
         
         <div class="p-3 border-top border-secondary bg-black">
+          <div class="mb-3 text-start">
+            <label class="form-label text-secondary small mb-1">Customer / Client *</label>
+            <select v-model="selectedClientId" class="form-select form-select-sm custom-input">
+              <option value="" disabled>-- Select Customer --</option>
+              <option value="walk_in">Walk-in Customer</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">
+                {{ client.name }} ({{ client.phone }})
+              </option>
+            </select>
+          </div>
+
           <div class="d-flex justify-content-between mb-2">
             <span class="text-secondary">Subtotal</span>
             <span class="text-light">৳{{ subtotal }}</span>
@@ -77,10 +88,10 @@
             <span class="fs-5 fw-bold text-success">৳{{ grandTotal }}</span>
           </div>
           
-          <button class="btn btn-success w-100 fw-bold py-2 mb-2" :disabled="cart.length === 0" @click="openPaymentModal">
-            Checkout
+          <button class="btn btn-success w-100 fw-bold py-2 mb-2" :disabled="cart.length === 0 || selectedClientId === ''" @click="openPaymentModal">
+            Checkout & Pay
           </button>
-          <button class="btn btn-outline-danger w-100" :disabled="cart.length === 0" @click="cart = []; discount = 0">
+          <button class="btn btn-outline-danger w-100" :disabled="cart.length === 0" @click="cart = []; discount = 0; selectedClientId = ''">
             Clear Cart
           </button>
         </div>
@@ -96,18 +107,8 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body text-center">
-            <h3 class="text-success mb-4">Total: ৳{{ grandTotal }}</h3>
-            
-            <div class="mb-3 text-start">
-              <label class="form-label">Customer / Client *</label>
-              <select v-model="selectedClientId" class="form-select custom-input py-2">
-                <option value="" disabled>-- Select Customer --</option>
-                <option value="walk_in">Walk-in Customer</option>
-                <option v-for="client in clients" :key="client.id" :value="client.id">
-                  {{ client.name }} ({{ client.phone }})
-                </option>
-              </select>
-            </div>
+            <h3 class="text-success mb-2">Total: ৳{{ grandTotal }}</h3>
+            <h6 class="text-info mb-4">Customer: {{ selectedClientName }}</h6>
             
             <div class="mb-3 text-start">
               <label class="form-label">Cash Received (৳)</label>
@@ -121,13 +122,14 @@
           </div>
           <div class="modal-footer border-secondary">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" ref="closePaymentModalBtn">Cancel</button>
-            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0 || selectedClientId === '' || (changeAmount < 0 && selectedClientId === 'walk_in')">
+            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0 || (changeAmount < 0 && selectedClientId === 'walk_in')">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
               Confirm Sale
             </button>
           </div>
         </div>
       </div>
+    </div>
     <!-- Thermal Receipt Modal (Hidden for printing) -->
     <div class="d-none">
       <div id="printReceiptArea" class="bg-white text-dark p-3" style="width: 300px; font-family: monospace;">
@@ -135,7 +137,8 @@
           <h4 class="m-0 fw-bold">Legends Arena</h4>
           <small>Point of Sale Invoice</small><br>
           <small>Date: {{ new Date().toLocaleString() }}</small><br>
-          <small v-if="lastInvoiceNo">Invoice: {{ lastInvoiceNo }}</small>
+          <small v-if="lastInvoiceNo">Invoice: {{ lastInvoiceNo }}</small><br>
+          <small>Customer: {{ lastClientName }}</small>
         </div>
         
         <table class="w-100 mb-2 border-top border-bottom border-dark border-dashed">
@@ -199,6 +202,7 @@ const selectedClientId = ref('');
 
 // Print vars
 const lastInvoiceNo = ref('');
+const lastClientName = ref('');
 const printCart = ref([]);
 const printSubtotal = ref(0);
 const printDiscount = ref(0);
@@ -325,6 +329,12 @@ const openPaymentModal = () => {
   bsPaymentModal.show();
 };
 
+const selectedClientName = computed(() => {
+  if (selectedClientId.value === 'walk_in') return 'Walk-in Customer';
+  const client = clients.value.find(c => c.id === selectedClientId.value);
+  return client ? client.name : 'Unknown';
+});
+
 const processCheckout = async () => {
   isSubmitting.value = true;
   try {
@@ -343,6 +353,7 @@ const processCheckout = async () => {
     
     // Prepare print data BEFORE clearing cart
     lastInvoiceNo.value = response.data.invoice?.invoice_number || 'UNKNOWN';
+    lastClientName.value = selectedClientName.value;
     printCart.value = [...cart.value];
     printSubtotal.value = subtotal.value;
     printDiscount.value = discount.value || 0;
