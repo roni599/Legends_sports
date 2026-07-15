@@ -65,7 +65,7 @@ class SupplierController extends Controller
     public function paySupplier(Request $request, Supplier $supplier)
     {
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:1|max:' . $supplier->balance
+            'amount' => 'required|numeric|min:1' // Removed max limit to allow Advance Payments
         ]);
         
         return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $supplier) {

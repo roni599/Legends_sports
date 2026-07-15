@@ -64,6 +64,47 @@ export const useSupplierStore = defineStore('suppliers', {
       } catch (error) {
         alert(error.response?.data?.message || 'Failed to delete supplier');
       }
+    },
+
+    async paySupplier(id, amount) {
+      this.loading = true;
+      try {
+        const response = await axios.post(`/api/suppliers/${id}/pay`, { amount });
+        const index = this.suppliers.findIndex(s => s.id === id);
+        if (index !== -1) {
+          this.suppliers[index] = response.data.supplier;
+        }
+        return response.data;
+      } catch (error) {
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async receiveRefund(id, amount) {
+      this.loading = true;
+      try {
+        const response = await axios.post(`/api/suppliers/${id}/refund`, { amount });
+        const index = this.suppliers.findIndex(s => s.id === id);
+        if (index !== -1) {
+          this.suppliers[index] = response.data.supplier;
+        }
+        return response.data;
+      } catch (error) {
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchLedger(id) {
+      try {
+        const response = await axios.get(`/api/suppliers/${id}/ledger`);
+        return response.data.ledger;
+      } catch (error) {
+        throw error;
+      }
     }
   }
 });
