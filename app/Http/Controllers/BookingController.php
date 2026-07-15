@@ -314,6 +314,12 @@ class BookingController extends Controller
 
             // 1. Handle Cancellation
             if ($statusChangedToCancelled) {
+                if (in_array($booking->status, ['running', 'completed'])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'status' => ['Cannot cancel a booking that is already running or completed to preserve accounting integrity.']
+                    ]);
+                }
+
                 // If cancelled, the client no longer owes the due amount for this booking
                 if ($booking->due_amount > 0) {
                     $client->decrement('total_due', $booking->due_amount);
