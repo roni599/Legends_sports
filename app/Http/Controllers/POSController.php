@@ -18,7 +18,8 @@ class POSController extends Controller
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.price' => 'required|numeric|min:0',
             'discount' => 'numeric|default:0',
-            'paid' => 'required|numeric|min:0'
+            'paid' => 'required|numeric|min:0',
+            'client_id' => 'nullable|exists:clients,id'
         ]);
 
         return DB::transaction(function () use ($validated) {
@@ -46,22 +47,30 @@ class POSController extends Controller
             
             $grandTotal = max(0, $subtotal - $discount);
             $paid = $validated['paid'];
+            $due = max(0, $grandTotal - $paid);
             
-            if ($paid < $grandTotal) {
-                throw new \Exception("Walk-in POS sales do not allow credit. Paid amount (৳{$paid}) must be at least the Grand Total (৳{$grandTotal}).");
+            if ($due > 0 && empty($validated['client_id'])) {
+                throw new \Exception("Walk-in POS sales do not allow credit. Paid amount (৳{$paid}) must be at least the Grand Total (৳{$grandTotal}). Please select a customer to allow due.");
             }
-            
-            $due = 0;
             
             // Create Invoice
             $invoice = Invoice::create([
                 'invoice_number' => 'POS-' . strtoupper(uniqid()),
+                'client_id' => $validated['client_id'] ?? null,
                 'subtotal' => $subtotal,
                 'discount' => $discount,
                 'grand_total' => $grandTotal,
                 'paid' => $paid,
                 'due' => $due
             ]);
+            
+            // Update Client Due if applicable
+            if ($due > 0 && !empty($validated['client_id'])) {
+                $client = \App\Models\Client::find($validated['client_id']);
+                if ($client) {
+                    $client->increment('total_due', $due);
+                }
+            }
             
             // Create Sales and Decrement Stock
             foreach ($validated['cart'] as $item) {
@@ -84,6 +93,7 @@ class POSController extends Controller
             
             if ($actualReceived > 0) {
                 \App\Models\Payment::create([
+                    'client_id' => $validated['client_id'] ?? null,
                     'amount' => $actualReceived,
                     'type' => 'in',
                     'payment_method' => 'cash',

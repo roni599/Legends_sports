@@ -13,6 +13,10 @@ class Invoice extends Model
         return $this->belongsTo(Booking::class);
     }
 
+    public function client() {
+        return $this->belongsTo(Client::class);
+    }
+
     public function sales() {
         return $this->hasMany(Sale::class);
     }

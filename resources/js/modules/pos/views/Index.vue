@@ -99,6 +99,16 @@
             <h3 class="text-success mb-4">Total: ৳{{ grandTotal }}</h3>
             
             <div class="mb-3 text-start">
+              <label class="form-label">Customer (Optional)</label>
+              <select v-model="selectedClientId" class="form-select custom-input py-2">
+                <option value="">Walk-in Customer</option>
+                <option v-for="client in clients" :key="client.id" :value="client.id">
+                  {{ client.name }} ({{ client.phone }})
+                </option>
+              </select>
+            </div>
+            
+            <div class="mb-3 text-start">
               <label class="form-label">Cash Received (৳)</label>
               <input type="number" v-model.number="paidAmount" class="form-control custom-input fs-4 py-2" required>
             </div>
@@ -110,7 +120,7 @@
           </div>
           <div class="modal-footer border-secondary">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" ref="closePaymentModalBtn">Cancel</button>
-            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0">
+            <button type="button" class="btn btn-success px-4" @click="processCheckout" :disabled="isSubmitting || paidAmount < 0 || (changeAmount < 0 && !selectedClientId)">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
               Confirm Sale
             </button>
@@ -183,6 +193,9 @@ const cart = ref([]);
 const discount = ref(0);
 const paidAmount = ref(0);
 
+const clients = ref([]);
+const selectedClientId = ref('');
+
 // Print vars
 const lastInvoiceNo = ref('');
 const printCart = ref([]);
@@ -214,9 +227,19 @@ const fetchProducts = async () => {
   }
 };
 
+const fetchClients = async () => {
+  try {
+    const response = await axios.get('/api/clients?all=true');
+    clients.value = response.data;
+  } catch (error) {
+    console.error('Failed to fetch clients');
+  }
+};
+
 onMounted(() => {
   bsPaymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
   fetchProducts();
+  fetchClients();
   
   // Auto focus barcode scanner field
   setTimeout(() => {
@@ -311,7 +334,8 @@ const processCheckout = async () => {
         price: i.price
       })),
       discount: discount.value || 0,
-      paid: paidAmount.value || 0
+      paid: paidAmount.value || 0,
+      client_id: selectedClientId.value || null
     };
     
     const response = await axios.post('/api/pos/checkout', payload);
