@@ -44,8 +44,10 @@ class PurchaseController extends Controller
                 $grandTotal += ($item['quantity'] * $item['unit_cost']);
             }
             
-            $paidAmount = min($validated['paid_amount'], $grandTotal);
+            $requestedPaid = $validated['paid_amount'];
+            $paidAmount = min($requestedPaid, $grandTotal);
             $dueAmount = max(0, $grandTotal - $paidAmount);
+            $advanceAmount = max(0, $requestedPaid - $grandTotal);
 
             $purchase = Purchase::create([
                 'supplier_id' => $supplier->id,
@@ -73,10 +75,16 @@ class PurchaseController extends Controller
             if ($dueAmount > 0) {
                 $supplier->increment('balance', $dueAmount);
             }
+            
+            if ($advanceAmount > 0) {
+                // If we overpaid, our debt to the supplier decreases (or goes negative)
+                $supplier->decrement('balance', $advanceAmount);
+            }
 
-            if ($paidAmount > 0) {
+            // We log the TOTAL requested paid amount as cash going out
+            if ($requestedPaid > 0) {
                 Payment::create([
-                    'amount' => $paidAmount,
+                    'amount' => $requestedPaid,
                     'type' => 'out', // money leaving the business
                     'payment_method' => 'cash',
                     'transaction_id' => 'PUR-' . $purchase->id

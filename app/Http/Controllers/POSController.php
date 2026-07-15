@@ -36,7 +36,12 @@ class POSController extends Controller
             $discount = $validated['discount'] ?? 0;
             $grandTotal = max(0, $subtotal - $discount);
             $paid = $validated['paid'];
-            $due = max(0, $grandTotal - $paid);
+            
+            if ($paid < $grandTotal) {
+                throw new \Exception("Walk-in POS sales do not allow credit. Paid amount (৳{$paid}) must be at least the Grand Total (৳{$grandTotal}).");
+            }
+            
+            $due = 0;
             
             // Create Invoice
             $invoice = Invoice::create([
