@@ -306,7 +306,18 @@ class BookingController extends Controller
 
     public function destroy(Booking $booking)
     {
-        $booking->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
+            // Reverse the due amount from the client's ledger if the booking is not already cancelled
+            if ($booking->status !== 'cancelled' && $booking->due_amount > 0) {
+                $client = \App\Models\Client::find($booking->client_id);
+                if ($client) {
+                    $client->decrement('total_due', $booking->due_amount);
+                }
+            }
+            
+            $booking->delete();
+        });
+
         return response()->noContent();
     }
 }
