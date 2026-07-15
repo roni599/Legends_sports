@@ -103,7 +103,7 @@ class ClientController extends Controller
                 'amount' => $validated['amount'],
                 'type' => 'in',
                 'payment_method' => $validated['payment_method'],
-                'transaction_id' => 'DUE-' . time()
+                'transaction_id' => 'DUE-' . $lockedClient->id . '-' . uniqid()
             ]);
 
             // Reduce total_due

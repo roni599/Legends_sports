@@ -318,8 +318,8 @@ class BookingController extends Controller
                     'client_id' => $validated['client_id'],
                     'amount' => $paidAmount,
                     'type' => 'in',
-                    'payment_method' => 'cash', // Defaulting to cash for initial booking via POS
-                    'transaction_id' => 'BKG-' . time()
+                    'payment_method' => 'cash',
+                    'transaction_id' => 'BKG-' . $booking->id
                 ]);
             }
 
@@ -394,8 +394,8 @@ class BookingController extends Controller
                         'client_id' => $lockedBooking->client_id,
                         'amount' => $refundAmount,
                         'type' => 'out',
-                        'payment_method' => 'cash', // Default to cash refund
-                        'transaction_id' => 'REF-' . time()
+                        'payment_method' => 'cash',
+                        'transaction_id' => 'BKG-REF-' . $lockedBooking->id
                     ]);
                 }
                 
@@ -431,8 +431,8 @@ class BookingController extends Controller
                     'client_id' => $lockedBooking->client_id,
                     'amount' => $payment,
                     'type' => 'in',
-                    'payment_method' => 'cash', // Defaulting to cash for POS update
-                    'transaction_id' => 'BKG-UPD-' . time()
+                    'payment_method' => 'cash',
+                    'transaction_id' => 'BKG-UPD-' . $lockedBooking->id . '-' . uniqid()
                 ]);
             }
 

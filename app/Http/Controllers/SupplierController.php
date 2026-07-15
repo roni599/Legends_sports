@@ -84,7 +84,7 @@ class SupplierController extends Controller
                 'amount' => $validated['amount'],
                 'type' => 'out', // money leaving the business
                 'payment_method' => 'cash',
-                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . time(),
+                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . uniqid(),
                 'client_id' => null // Optional: Add a supplier_id to Payments table if needed, for now we use transaction_id format
             ]);
             
@@ -108,9 +108,9 @@ class SupplierController extends Controller
             
             \App\Models\Payment::create([
                 'amount' => $validated['amount'],
-                'type' => 'in', // money entering the business
+                'type' => 'in', // cash coming back to drawer
                 'payment_method' => 'cash',
-                'transaction_id' => 'SUP-REF-' . $supplier->id . '-' . time()
+                'transaction_id' => 'SUP-REF-' . $supplier->id . '-' . uniqid()
             ]);
             
             return response()->json(['message' => 'Refund recorded successfully', 'supplier' => $supplier]);

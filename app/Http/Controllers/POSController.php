@@ -17,7 +17,7 @@ class POSController extends Controller
             'cart.*.product_id' => 'required|exists:products,id',
             'cart.*.quantity' => 'required|integer|min:1',
             'cart.*.price' => 'required|numeric|min:0',
-            'discount' => 'numeric|default:0',
+            'discount' => 'numeric|min:0|default:0',
             'paid' => 'required|numeric|min:0',
             'client_id' => 'nullable|exists:clients,id'
         ]);
