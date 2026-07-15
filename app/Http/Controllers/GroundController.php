@@ -53,6 +53,22 @@ class GroundController extends Controller
             'status' => 'required|in:active,inactive,maintenance'
         ]);
 
+        // Prevent setting to inactive/maintenance if there are upcoming active bookings
+        if (in_array($validated['status'], ['inactive', 'maintenance']) && $ground->status === 'active') {
+            $hasUpcomingBookings = \App\Models\BookingSlot::whereHas('booking', function($q) use ($ground) {
+                $q->where('ground_id', $ground->id)
+                  ->whereIn('status', ['pending', 'confirmed']);
+            })
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->exists();
+
+            if ($hasUpcomingBookings) {
+                return response()->json([
+                    'message' => 'Cannot change status to ' . $validated['status'] . ' because there are upcoming active bookings for this ground. Please cancel or reschedule them first.'
+                ], 422);
+            }
+        }
+
         $ground->update($validated);
         return response()->json($ground);
     }
