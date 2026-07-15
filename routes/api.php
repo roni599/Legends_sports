@@ -16,6 +16,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/stats', [App\Http\Controllers\DashboardController::class, 'stats']);
     Route::get('dashboard/chart', [App\Http\Controllers\DashboardController::class, 'chart']);
 
+    // Expenses
+    // We will use view_bookings permission as a placeholder for financial access until a specific finance permission is added
+    Route::middleware('permission:view_bookings')->apiResource('expense-categories', App\Http\Controllers\ExpenseCategoryController::class);
+    Route::middleware('permission:view_bookings')->apiResource('expenses', App\Http\Controllers\ExpenseController::class);
+
     // Users
     Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
     Route::middleware('permission:view_users')->get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);
