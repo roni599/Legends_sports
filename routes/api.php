@@ -19,14 +19,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // Expenses
     // We will use view_bookings permission as a placeholder for financial access until a specific finance permission is added
     Route::middleware('permission:view_bookings')->apiResource('expense-categories', App\Http\Controllers\ExpenseCategoryController::class);
-    Route::middleware('permission:view_bookings')->apiResource('expenses', App\Http\Controllers\ExpenseController::class);
+    Route::middleware(['permission:view_bookings', App\Http\Middleware\CheckMonthLock::class])->apiResource('expenses', App\Http\Controllers\ExpenseController::class);
 
     // Suppliers
     Route::middleware('permission:view_bookings')->apiResource('suppliers', App\Http\Controllers\SupplierController::class);
 
     // POS & Products
     Route::middleware('permission:view_bookings')->apiResource('products', App\Http\Controllers\ProductController::class);
-    Route::middleware('permission:create_bookings')->post('pos/checkout', [App\Http\Controllers\POSController::class, 'checkout']);
+    Route::middleware(['permission:create_bookings', App\Http\Middleware\CheckMonthLock::class])->post('pos/checkout', [App\Http\Controllers\POSController::class, 'checkout']);
+
+    // Accounting & Month Closing
+    Route::middleware('permission:view_users')->get('monthly-closings', [App\Http\Controllers\MonthlyClosingController::class, 'index']);
+    Route::middleware('permission:view_users')->post('monthly-closings', [App\Http\Controllers\MonthlyClosingController::class, 'store']);
+    Route::get('monthly-closings/check', [App\Http\Controllers\MonthlyClosingController::class, 'check']);
 
     // Users
     Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
@@ -64,8 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_bookings')->post('bookings/calculate-price', [App\Http\Controllers\BookingController::class, 'calculatePrice']);
     
     Route::middleware('permission:view_bookings')->get('bookings', [App\Http\Controllers\BookingController::class, 'index']);
-    Route::middleware('permission:create_bookings')->post('bookings', [App\Http\Controllers\BookingController::class, 'store']);
+    Route::middleware(['permission:create_bookings', App\Http\Middleware\CheckMonthLock::class])->post('bookings', [App\Http\Controllers\BookingController::class, 'store']);
     Route::middleware('permission:view_bookings')->get('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'show']);
-    Route::middleware('permission:edit_bookings')->put('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'update']);
-    Route::middleware('permission:delete_bookings')->delete('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'destroy']);
+    Route::middleware(['permission:edit_bookings', App\Http\Middleware\CheckMonthLock::class])->put('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'update']);
+    Route::middleware(['permission:delete_bookings', App\Http\Middleware\CheckMonthLock::class])->delete('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'destroy']);
 });
