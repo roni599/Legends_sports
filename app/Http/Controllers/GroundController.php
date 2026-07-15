@@ -59,6 +59,12 @@ class GroundController extends Controller
 
     public function destroy(Ground $ground)
     {
+        if (\App\Models\Booking::where('ground_id', $ground->id)->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete this ground because it has associated bookings. Please update its status to Inactive instead.'
+            ], 422);
+        }
+
         $ground->delete();
         return response()->json(null, 204);
     }
