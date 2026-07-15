@@ -244,7 +244,64 @@ class BookingController extends Controller
 
     public function update(Request $request, Booking $booking)
     {
-        // To be implemented in next step
+        $validated = $request->validate([
+            'status' => 'nullable|in:pending,confirmed,running,completed,cancelled,no_show',
+            'additional_payment' => 'nullable|numeric|min:0',
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $booking) {
+            $client = \App\Models\Client::find($booking->client_id);
+            $statusChangedToCancelled = isset($validated['status']) && 
+                                        $validated['status'] === 'cancelled' && 
+                                        $booking->status !== 'cancelled';
+
+            // 1. Handle Cancellation
+            if ($statusChangedToCancelled) {
+                // If cancelled, the client no longer owes the due amount for this booking
+                if ($booking->due_amount > 0) {
+                    $client->decrement('total_due', $booking->due_amount);
+                }
+                
+                $booking->update([
+                    'status' => 'cancelled',
+                    'due_amount' => 0 // Due is forgiven on cancellation
+                ]);
+                
+                // Update slots status to blocked/cancelled so they free up
+                $booking->slots()->update(['status' => 'blocked']);
+                return;
+            }
+
+            // 2. Handle Additional Payment
+            if (isset($validated['additional_payment']) && $validated['additional_payment'] > 0) {
+                $payment = $validated['additional_payment'];
+                
+                if ($payment > $booking->due_amount) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'additional_payment' => ['Payment cannot exceed the due amount of ' . $booking->due_amount]
+                    ]);
+                }
+
+                $booking->paid_amount += $payment;
+                $booking->due_amount -= $payment;
+                
+                if ($booking->due_amount == 0 && $booking->status === 'pending') {
+                    $booking->status = 'confirmed';
+                }
+
+                $booking->save();
+
+                // Reduce client's total due
+                $client->decrement('total_due', $payment);
+            }
+
+            // 3. Handle General Status Update
+            if (isset($validated['status']) && $validated['status'] !== 'cancelled') {
+                $booking->update(['status' => $validated['status']]);
+            }
+        });
+
+        return response()->json($booking->fresh()->load(['client', 'ground', 'slots']));
     }
 
     public function destroy(Booking $booking)
