@@ -1,0 +1,328 @@
+<template>
+  <div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="mb-1 text-primary fw-bold">Bookings Management</h4>
+        <p class="text-muted mb-0">View and manage all arena bookings</p>
+      </div>
+      <div>
+        <router-link :to="{ name: 'BookingCalendar' }" class="btn btn-outline-primary me-2">
+          <i class="bi bi-calendar3 me-1"></i> Calendar View
+        </router-link>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom-0 pt-4 pb-3">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" class="form-control border-start-0 ps-0" placeholder="Search by ID, Client name or Phone..." v-model="searchQuery" @input="debounceSearch">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" v-model="statusFilter" @change="fetchBookings()">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <input type="date" class="form-control" v-model="dateFilter" @change="fetchBookings()">
+          </div>
+          <div class="col-md-2 text-end">
+            <button class="btn btn-light" @click="resetFilters" v-if="searchQuery || statusFilter || dateFilter">
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">ID</th>
+              <th>Client</th>
+              <th>Ground</th>
+              <th>Date & Time</th>
+              <th>Financials</th>
+              <th>Status</th>
+              <th class="text-end pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="isLoading">
+              <td colspan="7" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <div class="mt-2 text-muted">Loading bookings...</div>
+              </td>
+            </tr>
+            <tr v-else-if="bookings.length === 0">
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+                No bookings found matching your criteria.
+              </td>
+            </tr>
+            <tr v-else v-for="booking in bookings" :key="booking.id">
+              <td class="ps-4 fw-bold text-secondary">#{{ booking.id }}</td>
+              <td>
+                <div class="fw-bold">{{ booking.client?.name }}</div>
+                <small class="text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ booking.client?.phone }}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ booking.ground?.name }}</span>
+              </td>
+              <td>
+                <div v-for="slot in booking.slots" :key="slot.id">
+                  <div class="fw-bold text-dark">{{ formatDate(slot.date) }}</div>
+                  <small class="text-primary">{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</small>
+                </div>
+              </td>
+              <td>
+                <div class="text-sm">Total: <strong>৳{{ booking.total_amount }}</strong></div>
+                <div class="text-sm text-success">Paid: ৳{{ booking.paid_amount }}</div>
+                <div class="text-sm text-danger" v-if="booking.due_amount > 0">Due: ৳{{ booking.due_amount }}</div>
+              </td>
+              <td>
+                <span class="badge rounded-pill" :class="getStatusBadgeClass(booking.status)">
+                  {{ booking.status.toUpperCase() }}
+                </span>
+              </td>
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-primary me-2" @click="openManageModal(booking)">
+                  Manage
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="card-footer bg-white pt-4 pb-3" v-if="pagination.last_page > 1">
+        <nav>
+          <ul class="pagination justify-content-center mb-0">
+            <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
+              <button class="page-link" @click="fetchBookings(pagination.current_page - 1)">Previous</button>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">Page {{ pagination.current_page }} of {{ pagination.last_page }}</span>
+            </li>
+            <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
+              <button class="page-link" @click="fetchBookings(pagination.current_page + 1)">Next</button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Manage Booking Modal -->
+    <div v-if="showModal" class="modal-backdrop fade show"></div>
+    <div v-if="showModal" class="modal fade show d-block" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold">Manage Booking #{{ selectedBooking?.id }}</h5>
+            <button type="button" class="btn-close" @click="closeModal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Receive Payment -->
+            <div class="mb-4" v-if="selectedBooking?.due_amount > 0 && selectedBooking?.status !== 'cancelled'">
+              <h6 class="fw-bold text-success mb-3"><i class="bi bi-cash me-2"></i>Receive Payment</h6>
+              <div class="input-group">
+                <span class="input-group-text">৳</span>
+                <input type="number" class="form-control" v-model="paymentAmount" :max="selectedBooking?.due_amount">
+                <button class="btn btn-success" @click="submitPayment" :disabled="isSubmitting || paymentAmount <= 0 || paymentAmount > selectedBooking?.due_amount">
+                  Pay Now
+                </button>
+              </div>
+              <small class="text-muted mt-1 d-block">Max due: ৳{{ selectedBooking?.due_amount }}</small>
+            </div>
+
+            <!-- Change Status -->
+            <div class="mb-4">
+              <h6 class="fw-bold text-primary mb-3"><i class="bi bi-arrow-repeat me-2"></i>Change Status</h6>
+              <select class="form-select" v-model="newStatus" @change="submitStatusChange">
+                <option :value="selectedBooking?.status" disabled>Current: {{ selectedBooking?.status.toUpperCase() }}</option>
+                <option value="pending" v-if="selectedBooking?.status === 'confirmed'">Pending</option>
+                <option value="confirmed" v-if="selectedBooking?.status === 'pending'">Confirmed</option>
+                <option value="running" v-if="['confirmed', 'pending'].includes(selectedBooking?.status)">Running</option>
+                <option value="completed" v-if="selectedBooking?.status === 'running'">Completed</option>
+                <option value="cancelled" v-if="!['completed', 'running', 'cancelled'].includes(selectedBooking?.status)">Cancelled</option>
+                <option value="no_show" v-if="['pending', 'confirmed'].includes(selectedBooking?.status)">No Show</option>
+              </select>
+            </div>
+
+            <!-- Cancellation & Refund Logic -->
+            <div class="mb-3 p-3 bg-danger bg-opacity-10 rounded border border-danger border-opacity-25" v-if="newStatus === 'cancelled'">
+              <h6 class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancellation Warning</h6>
+              <p class="text-sm text-danger mb-2">Cancelling this booking will forgive the remaining due amount of ৳{{ selectedBooking?.due_amount }}.</p>
+              
+              <div v-if="selectedBooking?.paid_amount > 0">
+                <label class="form-label text-danger fw-bold">Refund Amount (Max: ৳{{ selectedBooking?.paid_amount }})</label>
+                <input type="number" class="form-control border-danger" v-model="refundAmount" min="0" :max="selectedBooking?.paid_amount">
+              </div>
+            </div>
+            
+            <button v-if="newStatus === 'cancelled'" class="btn btn-danger w-100 fw-bold" @click="submitCancellation" :disabled="isSubmitting">
+              Confirm Cancellation
+            </button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+
+const bookings = ref([]);
+const isLoading = ref(true);
+const searchQuery = ref('');
+const statusFilter = ref('');
+const dateFilter = ref('');
+const pagination = ref({ current_page: 1, last_page: 1 });
+let searchTimeout = null;
+
+const showModal = ref(false);
+const selectedBooking = ref(null);
+const paymentAmount = ref(0);
+const newStatus = ref('');
+const refundAmount = ref(0);
+const isSubmitting = ref(false);
+
+const fetchBookings = async (page = 1) => {
+  isLoading.value = true;
+  try {
+    const params = { page };
+    if (searchQuery.value) params.search = searchQuery.value;
+    if (statusFilter.value) params.status = statusFilter.value;
+    if (dateFilter.value) params.date = dateFilter.value;
+
+    const { data } = await axios.get('/api/bookings', { params });
+    bookings.value = data.data;
+    pagination.value = {
+      current_page: data.current_page,
+      last_page: data.last_page
+    };
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const debounceSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => fetchBookings(1), 300);
+};
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  statusFilter.value = '';
+  dateFilter.value = '';
+  fetchBookings(1);
+};
+
+const openManageModal = (booking) => {
+  selectedBooking.value = booking;
+  paymentAmount.value = booking.due_amount;
+  newStatus.value = booking.status;
+  refundAmount.value = 0;
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  selectedBooking.value = null;
+};
+
+const submitPayment = async () => {
+  if (!paymentAmount.value || paymentAmount.value <= 0) return;
+  isSubmitting.value = true;
+  try {
+    await axios.put(`/api/bookings/${selectedBooking.value.id}`, {
+      additional_payment: paymentAmount.value
+    });
+    closeModal();
+    fetchBookings(pagination.value.current_page);
+  } catch (error) {
+    alert(error.response?.data?.message || 'Error processing payment');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const submitStatusChange = async () => {
+  if (newStatus.value === selectedBooking.value.status) return;
+  if (newStatus.value === 'cancelled') return; // Handled separately
+  
+  isSubmitting.value = true;
+  try {
+    await axios.put(`/api/bookings/${selectedBooking.value.id}`, {
+      status: newStatus.value
+    });
+    closeModal();
+    fetchBookings(pagination.value.current_page);
+  } catch (error) {
+    alert(error.response?.data?.message || 'Error updating status');
+    newStatus.value = selectedBooking.value.status;
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const submitCancellation = async () => {
+  isSubmitting.value = true;
+  try {
+    await axios.put(`/api/bookings/${selectedBooking.value.id}`, {
+      status: 'cancelled',
+      refund_amount: refundAmount.value || 0
+    });
+    closeModal();
+    fetchBookings(pagination.value.current_page);
+  } catch (error) {
+    alert(error.response?.data?.message || 'Error cancelling booking');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatTime = (timeString) => {
+  return new Date('2000-01-01T' + timeString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+};
+
+const getStatusBadgeClass = (status) => {
+  const map = {
+    pending: 'bg-warning text-dark',
+    confirmed: 'bg-info text-dark',
+    running: 'bg-primary',
+    completed: 'bg-success',
+    cancelled: 'bg-danger',
+    no_show: 'bg-secondary'
+  };
+  return map[status] || 'bg-light text-dark';
+};
+
+onMounted(() => {
+  fetchBookings();
+});
+</script>
+
+<style scoped>
+.table > :not(caption) > * > * {
+  padding: 1rem 0.5rem;
+}
+</style>
