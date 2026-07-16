@@ -2,9 +2,12 @@
   <div class="content-card">
     <div class="content-header d-flex justify-content-between align-items-center">
       <h3 class="fs-5 m-0 text-light">Users List</h3>
-      <button class="btn btn-primary btn-sm" @click="openModal(null)">
-        + Add New User
-      </button>
+      <div class="d-flex gap-2">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm text-dark" placeholder="Search name, email or phone..." style="width: 250px;">
+        <button class="btn btn-primary btn-sm" @click="openModal(null)">
+          + Add New User
+        </button>
+      </div>
     </div>
 
     <!-- Users Table -->
@@ -138,6 +141,8 @@ const userStore = useUserStore();
 const isEditing = ref(false);
 const isSaving = ref(false);
 const editingId = ref(null);
+const searchQuery = ref('');
+let searchTimeout = null;
 
 const form = ref({
   name: '',
@@ -153,6 +158,13 @@ onMounted(() => {
   userStore.fetchUsers();
   userStore.fetchRoles();
 });
+
+const handleSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    userStore.fetchUsers(searchQuery.value);
+  }, 500);
+};
 
 const openModal = (user = null) => {
   if (user) {

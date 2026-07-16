@@ -9,10 +9,11 @@ export const useRoleStore = defineStore('roles', {
     error: null,
   }),
   actions: {
-    async fetchRoles() {
+    async fetchRoles(search = '') {
       this.loading = true;
       try {
-        const response = await axios.get('/api/roles');
+        const url = search ? `/api/roles?search=${encodeURIComponent(search)}` : '/api/roles';
+        const response = await axios.get(url);
         this.roles = response.data;
       } catch (err) {
         this.error = 'Failed to fetch roles';

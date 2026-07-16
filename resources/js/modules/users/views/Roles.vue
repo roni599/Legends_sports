@@ -5,9 +5,12 @@
         <h3 class="fs-5 m-0 text-light">User Roles</h3>
         <p class="text-secondary small mb-0 mt-1">Manage system roles and their default permissions.</p>
       </div>
-      <button class="btn btn-primary btn-sm" @click="createNewRole" v-if="!isEditorOpen">
-        + Add New Role
-      </button>
+      <div class="d-flex gap-2">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm text-dark" placeholder="Search role name..." style="width: 200px;" v-if="!isEditorOpen">
+        <button class="btn btn-primary btn-sm" @click="createNewRole" v-if="!isEditorOpen">
+          + Add New Role
+        </button>
+      </div>
     </div>
 
     <!-- Roles Table -->
@@ -127,11 +130,20 @@ const newRoleName = ref('');
 const selectedPermissions = ref([]);
 const isSaving = ref(false);
 const loadingPermissions = ref(false);
+const searchQuery = ref('');
+let searchTimeout = null;
 
 onMounted(() => {
   roleStore.fetchRoles();
   roleStore.fetchPermissions();
 });
+
+const handleSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    roleStore.fetchRoles(searchQuery.value);
+  }, 500);
+};
 
 const groupedPermissions = computed(() => {
   const groups = {};

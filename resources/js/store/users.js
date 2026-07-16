@@ -10,10 +10,11 @@ export const useUserStore = defineStore('users', {
     error: null,
   }),
   actions: {
-    async fetchUsers() {
+    async fetchUsers(search = '') {
       this.loading = true;
       try {
-        const response = await axios.get('/api/users');
+        const url = search ? `/api/users?search=${encodeURIComponent(search)}` : '/api/users';
+        const response = await axios.get(url);
         this.users = response.data;
       } catch (err) {
         this.error = 'Failed to fetch users';
