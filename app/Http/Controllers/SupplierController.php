@@ -81,11 +81,11 @@ class SupplierController extends Controller
             $supplier->decrement('balance', $validated['amount']);
             
             \App\Models\Payment::create([
+                'supplier_id' => $supplier->id,
                 'amount' => $validated['amount'],
                 'type' => 'out', // money leaving the business
                 'payment_method' => 'cash',
-                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . uniqid(),
-                'client_id' => null // Optional: Add a supplier_id to Payments table if needed, for now we use transaction_id format
+                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . uniqid()
             ]);
             
             return response()->json(['message' => 'Payment recorded successfully', 'supplier' => $supplier]);
@@ -107,6 +107,7 @@ class SupplierController extends Controller
             $supplier->increment('balance', $validated['amount']);
             
             \App\Models\Payment::create([
+                'supplier_id' => $supplier->id,
                 'amount' => $validated['amount'],
                 'type' => 'in', // cash coming back to drawer
                 'payment_method' => 'cash',

@@ -84,6 +84,7 @@ class PurchaseController extends Controller
             // We log the TOTAL requested paid amount as cash going out
             if ($requestedPaid > 0) {
                 Payment::create([
+                    'supplier_id' => $supplier->id,
                     'amount' => $requestedPaid,
                     'type' => 'out', // money leaving the business
                     'payment_method' => 'cash',
