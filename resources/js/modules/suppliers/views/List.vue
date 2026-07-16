@@ -15,7 +15,7 @@
         <table class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>SL</th>
               <th>Name</th>
               <th>Company</th>
               <th>Phone</th>
@@ -30,8 +30,8 @@
             <tr v-else-if="supplierStore.suppliers.length === 0">
               <td colspan="6" class="text-center py-4">No suppliers found</td>
             </tr>
-            <tr v-else v-for="supplier in supplierStore.suppliers" :key="supplier.id">
-              <td>#{{ supplier.id }}</td>
+            <tr v-else v-for="(supplier, index) in supplierStore.suppliers" :key="supplier.id">
+              <td>{{ (supplierStore.page - 1) * 15 + index + 1 }}</td>
               <td>{{ supplier.name }}</td>
               <td>{{ supplier.company || '-' }}</td>
               <td>

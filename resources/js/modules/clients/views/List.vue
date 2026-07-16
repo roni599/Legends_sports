@@ -14,7 +14,7 @@
         <table class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>SL</th>
               <th>Name</th>
               <th>Phone</th>
               <th>Email</th>
@@ -29,8 +29,8 @@
             <tr v-else-if="clientStore.clients.length === 0">
               <td colspan="6" class="text-center py-4">No clients found</td>
             </tr>
-            <tr v-else v-for="client in clientStore.clients" :key="client.id">
-              <td>#{{ client.id }}</td>
+            <tr v-else v-for="(client, index) in clientStore.clients" :key="client.id">
+              <td>{{ (clientStore.page - 1) * 10 + index + 1 }}</td>
               <td>{{ client.name }}</td>
               <td>
                 <div class="d-flex align-items-center gap-2">

@@ -14,7 +14,7 @@
         <table class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>SL</th>
               <th>Name</th>
               <th>Type</th>
               <th>Time</th>
@@ -30,8 +30,8 @@
             <tr v-else-if="pricingStore.rules.length === 0">
               <td colspan="7" class="text-center py-4">No rules found</td>
             </tr>
-            <tr v-else v-for="rule in pricingStore.rules" :key="rule.id">
-              <td>#{{ rule.id }}</td>
+            <tr v-else v-for="(rule, index) in pricingStore.rules" :key="rule.id">
+              <td>{{ index + 1 }}</td>
               <td>{{ rule.name }} <br><small class="text-muted" v-if="rule.ground">({{ rule.ground.name }})</small></td>
               <td>
                 <span class="badge bg-secondary">{{ rule.type.replace('_', ' ').toUpperCase() }}</span>
