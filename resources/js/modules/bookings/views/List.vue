@@ -21,7 +21,7 @@
             </div>
           </div>
           <div class="col-md-3">
-            <select class="form-select" v-model="statusFilter" @change="fetchBookings()">
+            <select class="form-select custom-input" v-model="statusFilter" @change="fetchBookings()">
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
@@ -32,7 +32,7 @@
             </select>
           </div>
           <div class="col-md-3">
-            <input type="date" class="form-control" v-model="dateFilter" @change="fetchBookings()">
+            <input type="date" class="form-control custom-input" v-model="dateFilter" @change="fetchBookings()">
           </div>
           <div class="col-md-2 text-end">
             <button class="btn btn-light" @click="resetFilters" v-if="searchQuery || statusFilter || dateFilter">
@@ -63,7 +63,7 @@
               </td>
             </tr>
             <tr v-else-if="bookings.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
+              <td colspan="7" class="text-center py-5 text-white">
                 <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
                 No bookings found matching your criteria.
               </td>
