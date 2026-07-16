@@ -63,6 +63,10 @@ class User extends Authenticatable
 
     public function hasPermission($permission)
     {
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+
         // Check direct user permissions
         if ($this->directPermissions->contains('slug', $permission)) {
             return true;

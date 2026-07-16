@@ -183,6 +183,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import * as bootstrap from 'bootstrap';
 
 const products = ref([]);
 const loading = ref(false);

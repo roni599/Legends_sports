@@ -16,6 +16,9 @@ class ClientController extends Controller
             $query->where('name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%");
         }
+        if ($request->has('all')) {
+            return $query->get();
+        }
         
         return $query->paginate(10);
     }

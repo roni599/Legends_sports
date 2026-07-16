@@ -14,51 +14,56 @@
     
     <!-- Top KPI Widgets -->
     <div class="row g-4 mb-4">
+      <!-- 1. Today's Sales & Profit -->
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 bg-primary bg-gradient text-white">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <p class="mb-1 text-white-50 fw-bold text-uppercase">Today's Revenue</p>
-                <h3 class="fw-bold mb-0">৳ {{ kpi.todayRevenue }}</h3>
+                <p class="mb-1 text-white-50 fw-bold text-uppercase">Today's Sales</p>
+                <h3 class="fw-bold mb-0">৳ {{ kpi.todaySales.toLocaleString() }}</h3>
               </div>
               <div class="bg-white bg-opacity-25 rounded p-2">
-                <i class="bi bi-wallet2 fs-4"></i>
+                <i class="bi bi-cart-check fs-4"></i>
               </div>
             </div>
-            <div class="mt-3 text-sm">
-              <span class="text-white fw-bold">{{ kpi.todayBookings }}</span> bookings today
+            <div class="mt-3 text-sm d-flex justify-content-between">
+              <span>Net Profit:</span>
+              <span class="text-white fw-bold" :class="kpi.todayProfit >= 0 ? 'text-success' : 'text-danger'">৳ {{ kpi.todayProfit.toLocaleString() }}</span>
             </div>
           </div>
         </div>
       </div>
       
+      <!-- 2. Booking Status -->
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 bg-success bg-gradient text-white">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <p class="mb-1 text-white-50 fw-bold text-uppercase">Monthly Revenue</p>
-                <h3 class="fw-bold mb-0">৳ {{ kpi.monthlyRevenue }}</h3>
+                <p class="mb-1 text-white-50 fw-bold text-uppercase">Today's Bookings</p>
+                <h3 class="fw-bold mb-0">{{ kpi.todayConfirmedBookings + kpi.todayPendingBookings }}</h3>
               </div>
               <div class="bg-white bg-opacity-25 rounded p-2">
-                <i class="bi bi-graph-up fs-4"></i>
+                <i class="bi bi-calendar-check fs-4"></i>
               </div>
             </div>
-            <div class="mt-3 text-sm">
-              <span class="text-white fw-bold">{{ kpi.monthlyBookings }}</span> total bookings this month
+            <div class="mt-3 text-sm d-flex justify-content-between">
+              <span><i class="bi bi-check-circle me-1"></i> {{ kpi.todayConfirmedBookings }} Confirmed</span>
+              <span><i class="bi bi-clock me-1"></i> {{ kpi.todayPendingBookings }} Pending</span>
             </div>
           </div>
         </div>
       </div>
       
+      <!-- 3. Total Market Due -->
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 bg-danger bg-gradient text-white">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <p class="mb-1 text-white-50 fw-bold text-uppercase">Total Market Due</p>
-                <h3 class="fw-bold mb-0">৳ {{ kpi.totalDue }}</h3>
+                <h3 class="fw-bold mb-0">৳ {{ kpi.totalDue.toLocaleString() }}</h3>
               </div>
               <div class="bg-white bg-opacity-25 rounded p-2">
                 <i class="bi bi-exclamation-triangle fs-4"></i>
@@ -71,20 +76,21 @@
         </div>
       </div>
       
+      <!-- 4. Monthly Profit / Loss -->
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 bg-info bg-gradient text-white">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <p class="mb-1 text-white-50 fw-bold text-uppercase">Active Grounds</p>
-                <h3 class="fw-bold mb-0">{{ kpi.activeGrounds }}</h3>
+                <p class="mb-1 text-white-50 fw-bold text-uppercase">Monthly Profit</p>
+                <h3 class="fw-bold mb-0">৳ {{ kpi.monthlyProfit.toLocaleString() }}</h3>
               </div>
               <div class="bg-white bg-opacity-25 rounded p-2">
-                <i class="bi bi-layers fs-4"></i>
+                <i class="bi bi-graph-up-arrow fs-4"></i>
               </div>
             </div>
-            <div class="mt-3 text-sm">
-              Ready for bookings
+            <div class="mt-3 text-sm d-flex justify-content-between">
+              <span>Total Sales: ৳ {{ kpi.monthlySales.toLocaleString() }}</span>
             </div>
           </div>
         </div>
@@ -142,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import {
   Chart as ChartJS,
@@ -167,15 +173,20 @@ ChartJS.register(
 );
 
 const isLoading = ref(false);
+let refreshInterval = null;
 const recentBookings = ref([]);
 const kpi = ref({
+  todaySales: 0,
+  todayProfit: 0,
+  monthlySales: 0,
+  monthlyProfit: 0,
   todayRevenue: 0,
-  todayBookings: 0,
   monthlyRevenue: 0,
-  monthlyBookings: 0,
   totalDue: 0,
   dueClientsCount: 0,
-  activeGrounds: 0
+  activeGrounds: 0,
+  todayConfirmedBookings: 0,
+  todayPendingBookings: 0
 });
 
 const chartData = ref({});
@@ -210,14 +221,19 @@ const fetchDashboardData = async () => {
     ]);
 
     const stats = statsRes.data;
-    kpi.value.todayRevenue = parseFloat(stats.today_revenue || 0).toLocaleString();
-    kpi.value.monthlyRevenue = parseFloat(stats.monthly_revenue || 0).toLocaleString();
-    kpi.value.totalDue = parseFloat(stats.total_due || 0).toLocaleString();
+    kpi.value.todaySales = parseFloat(stats.today_sales || 0);
+    kpi.value.todayProfit = parseFloat(stats.today_profit || 0);
+    kpi.value.monthlySales = parseFloat(stats.monthly_sales || 0);
+    kpi.value.monthlyProfit = parseFloat(stats.monthly_profit || 0);
+    kpi.value.todayRevenue = parseFloat(stats.today_revenue || 0);
+    kpi.value.monthlyRevenue = parseFloat(stats.monthly_revenue || 0);
+    
+    kpi.value.totalDue = parseFloat(stats.total_due || 0);
     kpi.value.activeGrounds = stats.active_bookings;
-
-    kpi.value.todayBookings = stats.today_bookings;
-    kpi.value.monthlyBookings = stats.monthly_bookings;
-    kpi.value.dueClientsCount = stats.due_clients_count;
+    
+    kpi.value.todayConfirmedBookings = stats.today_confirmed_bookings || 0;
+    kpi.value.todayPendingBookings = stats.today_pending_bookings || 0;
+    kpi.value.dueClientsCount = stats.due_clients_count || 0;
 
     recentBookings.value = bookingsRes.data.data ? bookingsRes.data.data.slice(0, 5) : [];
 
@@ -243,6 +259,18 @@ const fetchDashboardData = async () => {
 
 onMounted(() => {
   fetchDashboardData();
+  // Auto-refresh data every 30 seconds for real-time widget feel
+  refreshInterval = setInterval(() => {
+    if (!isLoading.value) {
+      fetchDashboardData();
+    }
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+  }
 });
 </script>
 

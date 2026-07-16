@@ -85,7 +85,7 @@ const routes = [
         meta: { permission: 'manage_bookings' }
       },
       {
-        path: 'calendar',
+        path: 'bookings/calendar',
         name: 'BookingCalendar',
         component: () => import('./modules/bookings/views/Calendar.vue'),
         meta: { permission: 'manage_bookings' }
@@ -147,9 +147,14 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   
+  // If token exists but user is null (page reload), fetch user
+  if (authStore.token && !authStore.user) {
+    await authStore.fetchUser();
+  }
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' });
   } else if (to.meta.guest && authStore.isAuthenticated) {
