@@ -147,19 +147,27 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next({ name: 'Login' });
-  } else if (to.meta.guest && authStore.isAuthenticated) {
-    next({ name: 'Dashboard' });
-  } else if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
-    alert('You do not have permission to access this page.');
-    next({ name: 'Dashboard' });
-  } else {
-    next();
+    return next({ name: 'Login' });
+  } 
+  
+  if (to.meta.guest && authStore.isAuthenticated) {
+    return next({ name: 'Dashboard' });
+  } 
+  
+  if (authStore.isAuthenticated && !authStore.user) {
+    await authStore.fetchUser();
   }
+
+  if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
+    alert('You do not have permission to access this page.');
+    return next({ name: 'Dashboard' });
+  } 
+  
+  next();
 });
 
 export default router;
