@@ -48,8 +48,10 @@
       </div>
       
       <!-- Pagination -->
-      <div class="d-flex justify-content-between align-items-center mt-3">
-        <span class="text-secondary small">Showing {{ purchaseStore.purchases.length }} entries of {{ purchaseStore.total }}</span>
+      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+        <div class="text-secondary small mb-2 mb-md-0">
+          Showing {{ purchaseStore.purchases.length === 0 ? 0 : ((purchaseStore.page - 1) * purchaseStore.perPage) + 1 }} to {{ Math.min(purchaseStore.page * purchaseStore.perPage, purchaseStore.total) }} of {{ purchaseStore.total }} entries
+        </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="purchaseStore.page === 1" @click="changePage(purchaseStore.page - 1)">Previous</button>
           <button class="btn btn-sm btn-outline-secondary" :disabled="purchaseStore.page * purchaseStore.perPage >= purchaseStore.total" @click="changePage(purchaseStore.page + 1)">Next</button>

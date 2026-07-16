@@ -66,8 +66,10 @@
       </div>
       
       <!-- Pagination Design per user requirement -->
-      <div class="d-flex justify-content-between align-items-center mt-3">
-        <span class="text-secondary small">Showing {{ clientStore.clients.length }} entries of {{ clientStore.total }} entries</span>
+      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+        <div class="text-secondary small mb-2 mb-md-0">
+          Showing {{ clientStore.clients.length === 0 ? 0 : ((clientStore.page - 1) * 10) + 1 }} to {{ Math.min(clientStore.page * 10, clientStore.total) }} of {{ clientStore.total }} entries
+        </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page === 1" @click="changePage(clientStore.page - 1)">Previous</button>
           <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page * 10 >= clientStore.total" @click="changePage(clientStore.page + 1)">Next</button>
