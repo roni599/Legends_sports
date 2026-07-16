@@ -25,12 +25,17 @@ class POSController extends Controller
         return DB::transaction(function () use ($validated) {
             $subtotal = 0;
             
+            // OPTIMIZATION: Fetch all products in one query to prevent N+1
+            $productIds = collect($validated['cart'])->pluck('product_id')->unique();
+            $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
+            
             // Validate stock, active status, and calculate subtotal
             foreach ($validated['cart'] as $item) {
-                $product = Product::lockForUpdate()->find($item['product_id']);
+                $product = $products[$item['product_id']] ?? null;
                 
-                if (!$product->is_active) {
-                    throw new \Exception("Product '{$product->name}' is currently disabled and cannot be sold.");
+                if (!$product || !$product->is_active) {
+                    $name = $product ? $product->name : 'Unknown';
+                    throw new \Exception("Product '{$name}' is currently disabled or missing and cannot be sold.");
                 }
                 
                 if ($product->stock_quantity < $item['quantity']) {
@@ -75,20 +80,26 @@ class POSController extends Controller
             }
             
             // Create Sales and Decrement Stock
+            $salesData = [];
             foreach ($validated['cart'] as $item) {
-                $product = Product::find($item['product_id']);
+                $product = $products[$item['product_id']];
                 
-                Sale::create([
+                $salesData[] = [
                     'invoice_id' => $invoice->id,
                     'item_type' => $product->category,
                     'item_name' => $product->name,
                     'quantity' => $item['quantity'],
                     'unit_price' => $product->price, // Use DB price
-                    'total_price' => $item['quantity'] * $product->price
-                ]);
+                    'total_price' => $item['quantity'] * $product->price,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
                 
-                $product->decrement('stock_quantity', $item['quantity']);
+                // We update the product stock directly on the pre-fetched model
+                $product->stock_quantity -= $item['quantity'];
+                $product->save();
             }
+            Sale::insert($salesData);
             
             // Log Payment (Cash Drawer)
             $actualReceived = min($paid, $grandTotal); // If paid 500 for a 100 bill, revenue is 100, not 500

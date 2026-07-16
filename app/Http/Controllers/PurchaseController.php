@@ -40,6 +40,11 @@ class PurchaseController extends Controller
             $supplier = Supplier::lockForUpdate()->find($validated['supplier_id']);
             
             $grandTotal = 0;
+            
+            // OPTIMIZATION: Fetch all products in one query to prevent N+1
+            $productIds = collect($validated['items'])->pluck('product_id')->unique();
+            $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
+            
             foreach ($validated['items'] as $item) {
                 $grandTotal += ($item['quantity'] * $item['unit_cost']);
             }
@@ -58,19 +63,24 @@ class PurchaseController extends Controller
                 'due_amount' => $dueAmount,
             ]);
 
+            $purchaseItemsData = [];
             foreach ($validated['items'] as $item) {
-                PurchaseItem::create([
+                $purchaseItemsData[] = [
                     'purchase_id' => $purchase->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_cost' => $item['unit_cost'],
-                    'subtotal' => $item['quantity'] * $item['unit_cost']
-                ]);
+                    'subtotal' => $item['quantity'] * $item['unit_cost'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
                 
-                // Increase stock
-                $product = Product::find($item['product_id']);
-                $product->increment('stock_quantity', $item['quantity']);
+                // Increase stock using pre-fetched product
+                $product = $products[$item['product_id']];
+                $product->stock_quantity += $item['quantity'];
+                $product->save();
             }
+            PurchaseItem::insert($purchaseItemsData);
 
             if ($dueAmount > 0) {
                 $supplier->increment('balance', $dueAmount);
