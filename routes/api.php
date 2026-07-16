@@ -38,6 +38,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_users')->post('monthly-closings', [App\Http\Controllers\MonthlyClosingController::class, 'store']);
     Route::get('monthly-closings/check', [App\Http\Controllers\MonthlyClosingController::class, 'check']);
 
+    // Roles
+    Route::middleware('permission:view_users')->get('roles', [App\Http\Controllers\RoleController::class, 'index']);
+    Route::middleware('permission:create_users')->post('roles', [App\Http\Controllers\RoleController::class, 'store']);
+    Route::middleware('permission:view_users')->get('roles/{role}', [App\Http\Controllers\RoleController::class, 'show']);
+    Route::middleware('permission:edit_users')->put('roles/{role}', [App\Http\Controllers\RoleController::class, 'update']);
+    Route::middleware('permission:delete_users')->delete('roles/{role}', [App\Http\Controllers\RoleController::class, 'destroy']);
+
     // Users
     Route::middleware('permission:view_users')->get('users', [App\Http\Controllers\UserController::class, 'index']);
     Route::middleware('permission:view_users')->get('users/roles', [App\Http\Controllers\UserController::class, 'roles']);

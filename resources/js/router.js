@@ -82,49 +82,55 @@ const routes = [
         path: 'bookings',
         name: 'BookingList',
         component: () => import('./modules/bookings/views/List.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'bookings/calendar',
         name: 'BookingCalendar',
         component: () => import('./modules/bookings/views/Calendar.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
-        path: 'settings/roles',
-        name: 'SettingsRoles',
-        component: () => import('./modules/settings/views/UserPermissions.vue'),
-        meta: { permission: 'manage_users' }
+        path: 'users',
+        name: 'UserList',
+        component: () => import('./modules/users/views/List.vue'),
+        meta: { permission: 'view_users' }
+      },
+      {
+        path: 'users/roles',
+        name: 'UserRoles',
+        component: () => import('./modules/users/views/Roles.vue'),
+        meta: { permission: 'view_users' }
       },
       {
         path: 'expenses',
         name: 'ExpenseList',
         component: () => import('./modules/expenses/views/List.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'suppliers',
         name: 'SupplierList',
         component: () => import('./modules/suppliers/views/List.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'pos',
         name: 'POS',
         component: () => import('./modules/pos/views/Index.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'products',
         name: 'ProductList',
         component: () => import('./modules/pos/views/Products.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'purchases',
         name: 'PurchaseList',
         component: () => import('./modules/purchases/views/List.vue'),
-        meta: { permission: 'manage_bookings' }
+        meta: { permission: 'view_bookings' }
       },
       {
         path: 'month-closing',
@@ -168,15 +174,22 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next({ name: 'Login' });
-  } else if (to.meta.guest && authStore.isAuthenticated) {
-    next({ name: 'Dashboard' });
-  } else if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
-    alert('You do not have permission to access this page.');
-    next({ name: 'Dashboard' });
-  } else {
-    next();
+    return next({ name: 'Login' });
+  } 
+  
+  if (to.meta.guest && authStore.isAuthenticated) {
+    return next({ name: 'Dashboard' });
+  } 
+  
+  if (authStore.isAuthenticated && !authStore.user) {
+    await authStore.fetchUser();
   }
+
+  if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
+    return next({ name: 'Dashboard' });
+  } 
+  
+  next();
 });
 
 export default router;

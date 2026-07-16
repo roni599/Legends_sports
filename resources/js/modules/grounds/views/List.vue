@@ -14,7 +14,7 @@
         <table class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>SL</th>
               <th>Name</th>
               <th>Location</th>
               <th>Base Price (৳)</th>
@@ -29,8 +29,8 @@
             <tr v-else-if="groundStore.grounds.length === 0">
               <td colspan="6" class="text-center py-4">No grounds found</td>
             </tr>
-            <tr v-else v-for="ground in groundStore.grounds" :key="ground.id">
-              <td>#{{ ground.id }}</td>
+            <tr v-else v-for="(ground, index) in groundStore.grounds" :key="ground.id">
+              <td>{{ index + 1 }}</td>
               <td>{{ ground.name }}</td>
               <td>{{ ground.location || '-' }}</td>
               <td>{{ ground.base_price_per_hour }}</td>

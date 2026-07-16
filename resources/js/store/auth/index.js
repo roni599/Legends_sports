@@ -15,7 +15,10 @@ export const useAuthStore = defineStore('auth', {
     },
     hasPermission: (state) => (permission) => {
       if (!state.user || !state.user.roles) return false;
-      if (state.user.roles.some(r => r.slug === 'super-admin')) return true;
+      // Admin/Super-admin bypass
+      if (state.user.roles.some(r => ['admin', 'super-admin', 'super_admin'].includes(r.slug))) {
+        return true;
+      }
       return state.user.roles.some(r => 
         r.permissions && r.permissions.some(p => p.slug === permission)
       );

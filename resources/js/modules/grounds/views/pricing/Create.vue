@@ -16,10 +16,16 @@
           </div>
           <div class="col-md-4">
             <label class="form-label text-light">Ground (Optional)</label>
-            <select v-model="form.ground_id" class="form-select custom-input">
-              <option :value="null">All Grounds</option>
-              <option v-for="ground in groundStore.grounds" :key="ground.id" :value="ground.id">{{ ground.name }}</option>
-            </select>
+            <VueMultiselect
+              v-model="form.groundObj"
+              :options="groundStore.grounds"
+              track-by="id"
+              label="name"
+              placeholder="All Grounds"
+              :searchable="true"
+              :close-on-select="true"
+              :show-labels="false"
+            />
             <small class="text-danger" v-if="pricingStore.errors.ground_id">{{ pricingStore.errors.ground_id[0] }}</small>
           </div>
           <div class="col-md-3">
@@ -71,6 +77,8 @@ import { ref, onMounted } from 'vue';
 import { usePricingStore } from '../../../../store/pricing';
 import { useGroundStore } from '../../../../store/grounds';
 import { useRouter } from 'vue-router';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const pricingStore = usePricingStore();
 const groundStore = useGroundStore();
@@ -78,7 +86,7 @@ const router = useRouter();
 
 const form = ref({
   name: '',
-  ground_id: null,
+  groundObj: null,
   type: 'peak_hour',
   start_time: '',
   end_time: '',
@@ -92,7 +100,11 @@ onMounted(() => {
 });
 
 const saveRule = async () => {
-  const success = await pricingStore.createRule(form.value);
+  const payload = {
+    ...form.value,
+    ground_id: form.value.groundObj ? form.value.groundObj.id : null
+  };
+  const success = await pricingStore.createRule(payload);
   if (success) {
     router.push('/grounds/pricing');
   }

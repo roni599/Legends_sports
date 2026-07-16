@@ -81,11 +81,11 @@ class SupplierController extends Controller
             $supplier->decrement('balance', $validated['amount']);
             
             \App\Models\Payment::create([
+                'supplier_id' => $supplier->id,
                 'amount' => $validated['amount'],
                 'type' => 'out', // money leaving the business
                 'payment_method' => 'cash',
-                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . uniqid(),
-                'client_id' => null // Optional: Add a supplier_id to Payments table if needed, for now we use transaction_id format
+                'transaction_id' => 'SUP-PAY-' . $supplier->id . '-' . uniqid()
             ]);
             
             return response()->json(['message' => 'Payment recorded successfully', 'supplier' => $supplier]);
@@ -107,6 +107,7 @@ class SupplierController extends Controller
             $supplier->increment('balance', $validated['amount']);
             
             \App\Models\Payment::create([
+                'supplier_id' => $supplier->id,
                 'amount' => $validated['amount'],
                 'type' => 'in', // cash coming back to drawer
                 'payment_method' => 'cash',
@@ -124,13 +125,15 @@ class SupplierController extends Controller
             ->select('id', 'purchase_date as date', 'reference_no', 'grand_total as amount', \Illuminate\Support\Facades\DB::raw("'Purchase' as type"), 'paid_amount', 'due_amount')
             ->get();
             
-        // Get all payments (We identify supplier payments by transaction_id prefix)
-        $payments = \App\Models\Payment::where('transaction_id', 'like', "SUP-PAY-{$supplier->id}-%")
+        // Get all payments (money leaving us)
+        $payments = \App\Models\Payment::where('supplier_id', $supplier->id)
+            ->where('type', 'out')
             ->select('id', 'created_at as date', 'transaction_id as reference_no', 'amount', \Illuminate\Support\Facades\DB::raw("'Payment Made' as type"))
             ->get();
             
-        // Get all refunds
-        $refunds = \App\Models\Payment::where('transaction_id', 'like', "SUP-REF-{$supplier->id}-%")
+        // Get all refunds (cash coming back to us)
+        $refunds = \App\Models\Payment::where('supplier_id', $supplier->id)
+            ->where('type', 'in')
             ->select('id', 'created_at as date', 'transaction_id as reference_no', 'amount', \Illuminate\Support\Facades\DB::raw("'Refund Received' as type"))
             ->get();
 

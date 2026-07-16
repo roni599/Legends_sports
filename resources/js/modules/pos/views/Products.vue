@@ -15,7 +15,7 @@
         <table class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>SL</th>
               <th>Name</th>
               <th>Barcode</th>
               <th>Category</th>
@@ -32,8 +32,8 @@
             <tr v-else-if="productStore.products.length === 0">
               <td colspan="8" class="text-center py-4">No products found</td>
             </tr>
-            <tr v-else v-for="product in productStore.products" :key="product.id">
-              <td>#{{ product.id }}</td>
+            <tr v-else v-for="(product, index) in productStore.products" :key="product.id">
+              <td>{{ index + 1 }}</td>
               <td>{{ product.name }}</td>
               <td>{{ product.barcode || '-' }}</td>
               <td><span class="badge bg-secondary">{{ product.category }}</span></td>

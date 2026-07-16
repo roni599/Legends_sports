@@ -63,13 +63,17 @@
         <div class="p-3 border-top border-secondary bg-black">
           <div class="mb-3 text-start">
             <label class="form-label text-secondary small mb-1">Customer / Client *</label>
-            <select v-model="selectedClientId" class="form-select form-select-sm custom-input">
-              <option value="" disabled>-- Select Customer --</option>
-              <option value="walk_in">Walk-in Customer</option>
-              <option v-for="client in clients" :key="client.id" :value="client.id">
-                {{ client.name }} ({{ client.phone }})
-              </option>
-            </select>
+            <VueMultiselect 
+              v-model="selectedClientObj" 
+              :options="clientOptions" 
+              track-by="id" 
+              label="label" 
+              placeholder="-- Select Customer --"
+              :searchable="true" 
+              :close-on-select="true" 
+              :show-labels="false"
+              class="custom-multiselect"
+            />
           </div>
 
           <div class="d-flex justify-content-between mb-2">
@@ -91,7 +95,7 @@
           <button class="btn btn-success w-100 fw-bold py-2 mb-2" :disabled="cart.length === 0 || selectedClientId === ''" @click="openPaymentModal">
             Checkout & Pay
           </button>
-          <button class="btn btn-outline-danger w-100" :disabled="cart.length === 0" @click="cart = []; discount = 0; selectedClientId = ''">
+          <button class="btn btn-outline-danger w-100" :disabled="cart.length === 0" @click="cart = []; discount = 0; selectedClientObj = null">
             Clear Cart
           </button>
         </div>
@@ -181,9 +185,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import * as bootstrap from 'bootstrap';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const products = ref([]);
 const loading = ref(false);
@@ -199,7 +205,19 @@ const discount = ref(0);
 const paidAmount = ref(0);
 
 const clients = ref([]);
-const selectedClientId = ref('');
+const selectedClientObj = ref(null);
+
+const selectedClientId = computed(() => {
+  return selectedClientObj.value ? selectedClientObj.value.id : '';
+});
+
+const clientOptions = computed(() => {
+  const options = [{ id: 'walk_in', label: 'Walk-in Customer' }];
+  clients.value.forEach(c => {
+    options.push({ id: c.id, label: `${c.name} (${c.phone})` });
+  });
+  return options;
+});
 
 // Print vars
 const lastInvoiceNo = ref('');
