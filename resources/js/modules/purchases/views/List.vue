@@ -70,12 +70,17 @@
               <div class="row mb-4">
                 <div class="col-md-4">
                   <label class="form-label">Supplier *</label>
-                  <select v-model="purchaseForm.supplier_id" class="form-select custom-input" required>
-                    <option value="" disabled>Select Supplier</option>
-                    <option v-for="sup in supplierStore.suppliers" :key="sup.id" :value="sup.id">
-                      {{ sup.name }} {{ sup.company ? `(${sup.company})` : '' }}
-                    </option>
-                  </select>
+                  <VueMultiselect 
+                    v-model="purchaseForm.supplierObj" 
+                    :options="supplierStore.suppliers" 
+                    track-by="id" 
+                    label="name" 
+                    placeholder="Select Supplier"
+                    :searchable="true" 
+                    :close-on-select="true" 
+                    :show-labels="false"
+                    class="custom-multiselect"
+                  />
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Purchase Date *</label>
@@ -108,12 +113,17 @@
                     <tbody>
                       <tr v-for="(item, index) in purchaseForm.items" :key="index">
                         <td>
-                          <select v-model="item.product_id" class="form-select custom-input" required>
-                            <option value="" disabled>Select Product</option>
-                            <option v-for="prod in productStore.products" :key="prod.id" :value="prod.id">
-                              {{ prod.name }} (Current Stock: {{ prod.stock_quantity }})
-                            </option>
-                          </select>
+                          <VueMultiselect 
+                            v-model="item.productObj" 
+                            :options="productStore.products" 
+                            track-by="id" 
+                            label="name" 
+                            placeholder="Select Product"
+                            :searchable="true" 
+                            :close-on-select="true" 
+                            :show-labels="false"
+                            class="custom-multiselect"
+                          />
                         </td>
                         <td>
                           <input type="number" v-model.number="item.quantity" class="form-control custom-input" min="1" required>
@@ -205,6 +215,8 @@ import { ref, computed, onMounted } from 'vue';
 import { usePurchaseStore } from '../../../store/purchases';
 import { useSupplierStore } from '../../../store/suppliers';
 import { useProductStore } from '../../../store/products';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const purchaseStore = usePurchaseStore();
 const supplierStore = useSupplierStore();
@@ -217,12 +229,12 @@ const isSubmitting = ref(false);
 const activePurchase = ref(null);
 
 const purchaseForm = ref({
-  supplier_id: '',
+  supplierObj: null,
   purchase_date: new Date().toISOString().split('T')[0],
   reference_no: '',
   paid_amount: 0,
   items: [
-    { product_id: '', quantity: 1, unit_cost: 0 }
+    { productObj: null, quantity: 1, unit_cost: 0 }
   ]
 });
 
@@ -250,19 +262,19 @@ const changePage = (page) => {
 
 const openPurchaseModal = () => {
   purchaseForm.value = {
-    supplier_id: '',
+    supplierObj: null,
     purchase_date: new Date().toISOString().split('T')[0],
     reference_no: '',
     paid_amount: 0,
     items: [
-      { product_id: '', quantity: 1, unit_cost: 0 }
+      { productObj: null, quantity: 1, unit_cost: 0 }
     ]
   };
   bsPurchaseModal.show();
 };
 
 const addItemRow = () => {
-  purchaseForm.value.items.push({ product_id: '', quantity: 1, unit_cost: 0 });
+  purchaseForm.value.items.push({ productObj: null, quantity: 1, unit_cost: 0 });
 };
 
 const removeItemRow = (index) => {
@@ -276,10 +288,32 @@ const viewItems = (purchase) => {
 
 const submitPurchase = async () => {
   if (purchaseForm.value.items.length === 0) return;
+  if (!purchaseForm.value.supplierObj) {
+    alert('Please select a supplier');
+    return;
+  }
+  
+  // Create submission payload
+  const payload = {
+    supplier_id: purchaseForm.value.supplierObj.id,
+    purchase_date: purchaseForm.value.purchase_date,
+    reference_no: purchaseForm.value.reference_no,
+    paid_amount: purchaseForm.value.paid_amount,
+    items: purchaseForm.value.items.map(i => ({
+      product_id: i.productObj ? i.productObj.id : null,
+      quantity: i.quantity,
+      unit_cost: i.unit_cost
+    })).filter(i => i.product_id !== null)
+  };
+
+  if (payload.items.length === 0) {
+    alert('Please select at least one product');
+    return;
+  }
   
   isSubmitting.value = true;
   try {
-    await purchaseStore.addPurchase(purchaseForm.value);
+    await purchaseStore.addPurchase(payload);
     closePurchaseModalBtn.value.click();
     alert('Purchase saved successfully. Stock has been updated!');
   } catch (error) {
