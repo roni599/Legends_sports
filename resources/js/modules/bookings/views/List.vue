@@ -76,7 +76,7 @@
                 <small class="text-muted d-flex align-items-center mt-1">
                   <i class="bi bi-telephone-fill me-1"></i>{{ booking.client?.phone }}
                   <a v-if="booking.client?.phone" 
-                     :href="'https://wa.me/' + booking.client.phone + '?text=' + encodeURIComponent(`Hello ${booking.client.name}, this is regarding your booking #${booking.id} at ${booking.ground?.name} in Legends Multi Sports Arena.`)" 
+                     :href="'https://wa.me/' + (booking.client.phone.startsWith('0') ? '88' + booking.client.phone : booking.client.phone).replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(`Hello ${booking.client.name}, this is regarding your booking #${booking.id} at ${booking.ground?.name} in Legends Multi Sports Arena.`)" 
                      target="_blank" 
                      class="text-success ms-2" 
                      title="Quick WhatsApp Message">
@@ -99,7 +99,7 @@
                 <div class="text-sm text-danger" v-if="booking.due_amount > 0">
                   Due: ৳{{ booking.due_amount }}
                   <a v-if="booking.client?.phone" 
-                     :href="'https://wa.me/' + booking.client.phone + '?text=' + encodeURIComponent(`Dear ${booking.client.name}, you have a pending due of ৳${booking.due_amount} for your booking #${booking.id} at Legends Multi Sports Arena. Please settle it soon.`)" 
+                     :href="'https://wa.me/' + (booking.client.phone.startsWith('0') ? '88' + booking.client.phone : booking.client.phone).replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(`Dear ${booking.client.name}, you have a pending due of ৳${booking.due_amount} for your booking #${booking.id} at Legends Multi Sports Arena. Please settle it soon.`)" 
                      target="_blank" 
                      class="btn btn-sm btn-link text-success p-0 ms-2 text-decoration-none" 
                      title="Send Due Reminder">

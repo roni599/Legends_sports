@@ -38,7 +38,7 @@
                 <div class="d-flex align-items-center gap-2">
                   <span>{{ supplier.phone || '-' }}</span>
                   <a v-if="supplier.phone" 
-                     :href="'https://wa.me/' + supplier.phone" 
+                     :href="'https://wa.me/' + (supplier.phone.startsWith('0') ? '88' + supplier.phone : supplier.phone).replace(/[^0-9]/g, '')" 
                      target="_blank" 
                      class="btn btn-sm btn-success p-1 lh-1" 
                      title="Quick WhatsApp Message">
