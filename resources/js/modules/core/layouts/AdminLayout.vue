@@ -5,7 +5,7 @@
       <div class="sidebar-header">
         <h1 class="sidebar-brand m-0 fs-5">LEGENDS ARENA</h1>
       </div>
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" id="sidebarAccordion">
         <!-- Dashboard -->
         <router-link to="/" class="nav-item-custom" active-class="active">
           Dashboard
@@ -16,7 +16,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#clientMenu" role="button" aria-expanded="false" aria-controls="clientMenu">
             Clients ▾
           </a>
-          <div class="collapse" id="clientMenu">
+          <div class="collapse" id="clientMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/clients" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client List</router-link>
               <router-link to="/clients/create" class="nav-item-custom text-sm py-1" active-class="active" v-if="authStore.hasPermission('create_clients')">Add New Client</router-link>
@@ -29,7 +29,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#bookingMenu" role="button" aria-expanded="false" aria-controls="bookingMenu">
             Bookings ▾
           </a>
-          <div class="collapse" id="bookingMenu">
+          <div class="collapse" id="bookingMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/bookings/calendar" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Calendar View</router-link>
               <router-link to="/bookings" class="nav-item-custom text-sm py-1" active-class="active">Booking List</router-link>
@@ -42,7 +42,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#posMenu" role="button" aria-expanded="false" aria-controls="posMenu">
             POS & Store ▾
           </a>
-          <div class="collapse" id="posMenu">
+          <div class="collapse" id="posMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/pos" class="nav-item-custom text-sm mb-1 py-1" active-class="active">POS Checkout</router-link>
               <router-link to="/products" class="nav-item-custom text-sm py-1" active-class="active">Products (Stock)</router-link>
@@ -55,7 +55,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#financialMenu" role="button" aria-expanded="false" aria-controls="financialMenu">
             Financials ▾
           </a>
-          <div class="collapse" id="financialMenu">
+          <div class="collapse" id="financialMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/expenses" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Expenses</router-link>
               <router-link to="/suppliers" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Suppliers</router-link>
@@ -70,7 +70,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#groundMenu" role="button" aria-expanded="false" aria-controls="groundMenu">
             Ground Setup ▾
           </a>
-          <div class="collapse" id="groundMenu">
+          <div class="collapse" id="groundMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/grounds" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Ground List</router-link>
               <router-link to="/grounds/pricing" class="nav-item-custom text-sm py-1" active-class="active">Pricing Rules</router-link>
@@ -83,7 +83,7 @@
           <a class="nav-item-custom" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="false" aria-controls="settingsMenu">
             Settings ▾
           </a>
-          <div class="collapse" id="settingsMenu">
+          <div class="collapse" id="settingsMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
               <router-link to="/settings/roles" class="nav-item-custom text-sm mb-1 py-1" active-class="active">User Roles & Permissions</router-link>
             </div>
