@@ -50,7 +50,7 @@
       <!-- Pagination -->
       <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
         <div class="text-secondary small mb-2 mb-md-0">
-          Showing {{ supplierStore.suppliers.length === 0 ? 0 : ((supplierStore.page - 1) * supplierStore.perPage) + 1 }} to {{ Math.min(supplierStore.page * supplierStore.perPage, supplierStore.total) }} of {{ supplierStore.total }} entries
+          Showing {{ supplierStore.suppliers.length }} of {{ supplierStore.total }} entries
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="supplierStore.page === 1" @click="changePage(supplierStore.page - 1)">Previous</button>
