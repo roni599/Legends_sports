@@ -110,7 +110,7 @@ const isDateFiltered = ref(false);
 
 const initReport = () => {
   const type = route.params.type;
-  isDateFiltered.value = ['sales', 'income', 'expense'].includes(type);
+  isDateFiltered.value = ['sales', 'income', 'expense', 'income-vs-expense'].includes(type);
   
   if (isDateFiltered.value) {
     const today = new Date();

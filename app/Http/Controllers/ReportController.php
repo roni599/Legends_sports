@@ -173,6 +173,72 @@ class ReportController extends Controller
         $title = ucwords(str_replace('-', ' ', $type)) . ' Report';
 
         switch ($type) {
+            case 'income-vs-expense':
+                $incomesQuery = \App\Models\Booking::where('status', 'completed');
+                $expensesQuery = \App\Models\Expense::query();
+                $purchasesQuery = \App\Models\Purchase::query();
+
+                if ($request->has('start_date') && $request->has('end_date')) {
+                    $incomesQuery->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
+                    $expensesQuery->whereBetween('expense_date', [$request->start_date, $request->end_date]);
+                    $purchasesQuery->whereBetween('purchase_date', [$request->start_date, $request->end_date]);
+                }
+
+                $incomes = $incomesQuery->get();
+                $expenses = $expensesQuery->get();
+                $purchases = $purchasesQuery->get();
+
+                // Group by date
+                $dailyData = [];
+
+                foreach ($incomes as $inc) {
+                    $date = $inc->created_at->format('Y-m-d');
+                    if (!isset($dailyData[$date])) $dailyData[$date] = ['income' => 0, 'expense' => 0];
+                    $dailyData[$date]['income'] += $inc->net_amount;
+                }
+
+                foreach ($expenses as $exp) {
+                    $date = \Carbon\Carbon::parse($exp->expense_date)->format('Y-m-d');
+                    if (!isset($dailyData[$date])) $dailyData[$date] = ['income' => 0, 'expense' => 0];
+                    $dailyData[$date]['expense'] += $exp->amount;
+                }
+
+                foreach ($purchases as $pur) {
+                    $date = \Carbon\Carbon::parse($pur->purchase_date)->format('Y-m-d');
+                    if (!isset($dailyData[$date])) $dailyData[$date] = ['income' => 0, 'expense' => 0];
+                    $dailyData[$date]['expense'] += $pur->grand_total;
+                }
+
+                // Sort by date
+                ksort($dailyData);
+
+                $columns = ['Date', 'Total Income (৳)', 'Total Expense (৳)', 'Profit / Loss (৳)'];
+                
+                $totalInc = 0;
+                $totalExp = 0;
+                
+                foreach ($dailyData as $date => $data) {
+                    $profit = $data['income'] - $data['expense'];
+                    $totalInc += $data['income'];
+                    $totalExp += $data['expense'];
+                    
+                    $rows[] = [
+                        'Date' => $date,
+                        'Total Income (৳)' => $data['income'],
+                        'Total Expense (৳)' => $data['expense'],
+                        'Profit / Loss (৳)' => $profit
+                    ];
+                }
+
+                if (count($rows) > 0) {
+                    $rows[] = [
+                        'Date' => 'TOTAL',
+                        'Total Income (৳)' => $totalInc,
+                        'Total Expense (৳)' => $totalExp,
+                        'Profit / Loss (৳)' => $totalInc - $totalExp
+                    ];
+                }
+                break;
             case 'suppliers':
                 $suppliers = \App\Models\Supplier::all();
                 $columns = ['Supplier Info', 'Company', 'Address', 'Total Bought (৳)', 'Total Paid (৳)', 'Due (৳)', 'Advance (৳)'];

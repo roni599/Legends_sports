@@ -72,6 +72,7 @@
           </a>
           <div class="collapse" id="reportMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/reports/income-vs-expense" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Income vs Expense</router-link>
               <router-link to="/reports/income" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Income Report</router-link>
               <router-link to="/reports/expense" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Expense Report</router-link>
               <router-link to="/reports/cash-flow" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Cash Flow</router-link>
