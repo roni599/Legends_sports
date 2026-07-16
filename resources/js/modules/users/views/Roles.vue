@@ -5,10 +5,15 @@
         <h2 class="h3 mb-0 text-gray-800">User Roles</h2>
         <p class="text-muted mb-0">Manage system roles and their default permissions.</p>
       </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" @click="createNewRole" v-if="!isEditorOpen">
+          + Add New Role
+        </button>
+      </div>
     </div>
 
     <!-- Roles Table -->
-    <div class="card shadow-sm border-0 mb-4" v-if="!editingRole">
+    <div class="card shadow-sm border-0 mb-4" v-if="!isEditorOpen">
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-hover align-middle">
@@ -46,21 +51,29 @@
       </div>
     </div>
 
-    <!-- Permissions Editor (Visible only when editing a role) -->
-    <div v-if="editingRole" class="card shadow-sm border-0">
+    <!-- Permissions Editor (Visible only when editing or creating a role) -->
+    <div v-if="isEditorOpen" class="card shadow-sm border-0">
       <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <div>
-          <button class="btn btn-sm btn-outline-secondary me-3" @click="editingRole = null">
+          <button class="btn btn-sm btn-outline-secondary me-3" @click="closeEditor">
             ← Back to Roles
           </button>
-          <h5 class="m-0 fw-bold text-primary d-inline">Permissions for {{ editingRole.name }}</h5>
+          <h5 class="m-0 fw-bold text-primary d-inline">
+            {{ isCreating ? 'Create New Role' : 'Permissions for ' + editingRole.name }}
+          </h5>
         </div>
-        <button class="btn btn-primary px-4" @click="savePermissions" :disabled="isSaving">
+        <button class="btn btn-primary px-4" @click="saveRole" :disabled="isSaving">
           <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
-          Save Permissions
+          {{ isCreating ? 'Create Role' : 'Save Permissions' }}
         </button>
       </div>
       <div class="card-body">
+        
+        <div v-if="isCreating" class="mb-4 col-md-6">
+          <label class="form-label fw-bold">Role Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" v-model="newRoleName" placeholder="e.g. Area Manager" required>
+        </div>
+
         <h6 class="fw-bold text-dark mb-4 border-bottom pb-2">Select Accessible Segments</h6>
         
         <div v-if="loadingPermissions" class="text-center py-5">
@@ -112,7 +125,10 @@ import Swal from 'sweetalert2';
 
 const roleStore = useRoleStore();
 
+const isEditorOpen = ref(false);
+const isCreating = ref(false);
 const editingRole = ref(null);
+const newRoleName = ref('');
 const selectedPermissions = ref([]);
 const isSaving = ref(false);
 const loadingPermissions = ref(false);
@@ -161,7 +177,25 @@ const toggleGroup = (groupName, isChecked) => {
   }
 };
 
+const createNewRole = () => {
+  isEditorOpen.value = true;
+  isCreating.value = true;
+  editingRole.value = null;
+  newRoleName.value = '';
+  selectedPermissions.value = [];
+};
+
+const closeEditor = () => {
+  isEditorOpen.value = false;
+  isCreating.value = false;
+  editingRole.value = null;
+  newRoleName.value = '';
+  selectedPermissions.value = [];
+};
+
 const editRole = async (role) => {
+  isEditorOpen.value = true;
+  isCreating.value = false;
   editingRole.value = role;
   loadingPermissions.value = true;
   try {
@@ -169,20 +203,34 @@ const editRole = async (role) => {
     selectedPermissions.value = roleData.permissions.map(p => p.id);
   } catch (error) {
     Swal.fire('Error', 'Failed to load role permissions.', 'error');
-    editingRole.value = null;
+    closeEditor();
   } finally {
     loadingPermissions.value = false;
   }
 };
 
-const savePermissions = async () => {
-  if (!editingRole.value) return;
+const saveRole = async () => {
+  if (isCreating.value && !newRoleName.value.trim()) {
+    Swal.fire('Error', 'Role name is required.', 'error');
+    return;
+  }
+
   isSaving.value = true;
   try {
-    await roleStore.updateRolePermissions(editingRole.value.id, selectedPermissions.value);
-    Swal.fire('Success', 'Role permissions updated successfully!', 'success');
+    if (isCreating.value) {
+      await roleStore.createRole(newRoleName.value, selectedPermissions.value);
+      Swal.fire('Success', 'Role created successfully!', 'success');
+    } else {
+      await roleStore.updateRolePermissions(editingRole.value.id, selectedPermissions.value);
+      Swal.fire('Success', 'Role permissions updated successfully!', 'success');
+    }
+    closeEditor();
   } catch (error) {
-    Swal.fire('Error', error.response?.data?.message || 'Failed to save permissions.', 'error');
+    let msg = error.response?.data?.message || 'Failed to save.';
+    if (error.response?.data?.errors?.name) {
+      msg = error.response.data.errors.name[0];
+    }
+    Swal.fire('Error', msg, 'error');
   } finally {
     isSaving.value = false;
   }

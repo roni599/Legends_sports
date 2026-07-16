@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Roles
     Route::middleware('permission:view_users')->get('roles', [App\Http\Controllers\RoleController::class, 'index']);
+    Route::middleware('permission:create_users')->post('roles', [App\Http\Controllers\RoleController::class, 'store']);
     Route::middleware('permission:view_users')->get('roles/{role}', [App\Http\Controllers\RoleController::class, 'show']);
     Route::middleware('permission:edit_users')->put('roles/{role}', [App\Http\Controllers\RoleController::class, 'update']);
     Route::middleware('permission:delete_users')->delete('roles/{role}', [App\Http\Controllers\RoleController::class, 'destroy']);

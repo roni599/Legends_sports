@@ -37,6 +37,15 @@ export const useRoleStore = defineStore('roles', {
         throw err;
       }
     },
+    async createRole(name, permissions) {
+      try {
+        const response = await axios.post('/api/roles', { name, permissions });
+        this.roles.push(response.data);
+        return response.data;
+      } catch (err) {
+        throw err;
+      }
+    },
     async updateRolePermissions(id, permissions) {
       try {
         const response = await axios.put(`/api/roles/${id}`, { permissions });

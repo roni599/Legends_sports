@@ -13,6 +13,26 @@ class RoleController extends Controller
         return response()->json(Role::all());
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:roles,name',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,id'
+        ]);
+
+        $role = Role::create([
+            'name' => $validated['name'],
+            'slug' => \Illuminate\Support\Str::slug($validated['name'])
+        ]);
+
+        if (!empty($validated['permissions'])) {
+            $role->permissions()->sync($validated['permissions']);
+        }
+
+        return response()->json($role->load('permissions'), 201);
+    }
+
     public function show(Role $role)
     {
         return response()->json($role->load('permissions'));
