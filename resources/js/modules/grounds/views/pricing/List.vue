@@ -54,7 +54,7 @@
       
       <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
         <div class="text-secondary small mb-2 mb-md-0">
-          Showing {{ pricingStore.rules.length }} of {{ pricingStore.total }} entries
+          Showing {{ pricingStore.rules.length === 0 ? 0 : ((pricingStore.page - 1) * 10) + 1 }} to {{ Math.min(pricingStore.page * 10, pricingStore.total) }} of {{ pricingStore.total }} entries
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="pricingStore.page === 1" @click="changePage(pricingStore.page - 1)">Previous</button>

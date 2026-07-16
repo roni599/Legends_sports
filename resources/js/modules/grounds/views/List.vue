@@ -52,7 +52,7 @@
       
       <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
         <div class="text-secondary small mb-2 mb-md-0">
-          Showing {{ groundStore.grounds.length }} of {{ groundStore.total }} entries
+          Showing {{ groundStore.grounds.length === 0 ? 0 : ((groundStore.page - 1) * 10) + 1 }} to {{ Math.min(groundStore.page * 10, groundStore.total) }} of {{ groundStore.total }} entries
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="groundStore.page === 1" @click="changePage(groundStore.page - 1)">Previous</button>

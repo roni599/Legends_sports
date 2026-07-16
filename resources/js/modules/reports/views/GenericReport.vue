@@ -97,7 +97,7 @@
       <!-- Custom Pagination -->
       <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center" v-if="actualData.length > 0">
         <div class="text-muted text-sm mb-2 mb-md-0">
-          Showing {{ paginatedData.length }} of {{ actualData.length }} entries
+          Showing {{ paginationStart }} to {{ paginationEnd }} of {{ actualData.length }} entries
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage === 1" @click="currentPage--">Previous</button>
