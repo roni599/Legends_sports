@@ -30,10 +30,10 @@
           </thead>
           <tbody>
             <tr v-if="clientStore.loading">
-              <td colspan="11" class="text-center py-4">Loading clients...</td>
+              <td colspan="12" class="text-center py-4">Loading clients...</td>
             </tr>
             <tr v-else-if="clientStore.clients.length === 0">
-              <td colspan="11" class="text-center py-4">No clients found</td>
+              <td colspan="12" class="text-center py-4">No clients found</td>
             </tr>
             <tr v-else v-for="(client, index) in clientStore.clients" :key="client.id">
               <td>{{ (clientStore.page - 1) * 10 + index + 1 }}</td>
@@ -68,10 +68,10 @@
       </div>
       
       <!-- Pagination Design per user requirement -->
-      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
-        <div class="text-secondary small mb-2 mb-md-0">
-          Showing {{ clientStore.clients.length === 0 ? 0 : ((clientStore.page - 1) * 10) + 1 }} to {{ Math.min(clientStore.page * 10, clientStore.total) }} of {{ clientStore.total }} entries
-        </div>
+      <div class="d-flex justify-content-between align-items-center mt-3" v-if="clientStore.total > 0">
+        <span class="text-secondary small">
+          Showing {{ ((clientStore.page - 1) * 10) + 1 }} to {{ Math.min(clientStore.page * 10, clientStore.total) }} of {{ clientStore.total }} entries
+        </span>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page === 1" @click="changePage(clientStore.page - 1)">Previous</button>
           <button class="btn btn-sm btn-outline-secondary" :disabled="clientStore.page * 10 >= clientStore.total" @click="changePage(clientStore.page + 1)">Next</button>
