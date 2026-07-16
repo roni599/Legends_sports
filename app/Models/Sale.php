@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\LocksClosedMonths;
 
     protected $guarded = ["id"];
+
+    protected function getClosingDateField()
+    {
+        return 'created_at';
+    }
 }

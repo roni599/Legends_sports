@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
+    use \App\Traits\LocksClosedMonths;
+
     protected $guarded = ['id'];
+
+    protected function getClosingDateField()
+    {
+        return 'created_at';
+    }
 
     public function client() {
         return $this->belongsTo(Client::class);

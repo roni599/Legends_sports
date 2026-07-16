@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
+    use \App\Traits\LocksClosedMonths;
+
     protected $guarded = ['id'];
+
+    protected function getClosingDateField()
+    {
+        return 'created_at';
+    }
 
     public function booking() {
         return $this->belongsTo(Booking::class);
