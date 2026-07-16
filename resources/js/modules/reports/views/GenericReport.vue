@@ -72,18 +72,41 @@
                   </div>
                 </td>
               </tr>
-              <tr v-else-if="data.length === 0">
+              <tr v-else-if="paginatedData.length === 0 && !totalRow">
                 <td :colspan="columns.length" class="text-center py-5 text-muted">
                   No records found.
                 </td>
               </tr>
-              <tr v-else v-for="(row, rIndex) in data" :key="rIndex" :class="{'table-active fw-bold': isTotalRow(row)}">
+              <tr v-else v-for="(row, rIndex) in paginatedData" :key="rIndex">
                 <td v-for="(col, cIndex) in columns" :key="cIndex" :class="{'ps-4': cIndex === 0, 'text-end pe-4': isNumericColumn(col)}" style="white-space: pre-line;">
                   {{ formatCell(col, row[col]) }}
                 </td>
               </tr>
+              
+              <!-- Total Row (Always pinned at the bottom) -->
+              <tr v-if="totalRow" class="table-active fw-bold">
+                <td v-for="(col, cIndex) in columns" :key="cIndex" :class="{'ps-4': cIndex === 0, 'text-end pe-4': isNumericColumn(col)}">
+                  {{ formatCell(col, totalRow[col]) }}
+                </td>
+              </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+      
+      <!-- Custom Pagination -->
+      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center" v-if="actualData.length > 0">
+        <div class="text-muted text-sm mb-2 mb-md-0">
+          Showing {{ paginationStart }} to {{ paginationEnd }} of {{ actualData.length }} entries
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage === 1" @click="currentPage--">Previous</button>
+          
+          <button v-for="page in visiblePages" :key="page" class="btn btn-sm" :class="page === currentPage ? 'btn-primary' : 'btn-outline-secondary'" @click="currentPage = page">
+            {{ page }}
+          </button>
+          
+          <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage === totalPages" @click="currentPage++">Next</button>
         </div>
       </div>
     </div>
@@ -91,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 
@@ -101,12 +124,62 @@ const data = ref([]);
 const columns = ref([]);
 const title = ref('');
 
+// Pagination state
+const currentPage = ref(1);
+const perPage = ref(10);
+
 const filter = reactive({
   start_date: '',
   end_date: ''
 });
 
 const isDateFiltered = ref(false);
+
+// Computed properties for pagination
+const actualData = computed(() => {
+  return data.value.filter(row => !isTotalRow(row));
+});
+
+const totalRow = computed(() => {
+  return data.value.find(row => isTotalRow(row));
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(actualData.value.length / perPage.value) || 1;
+});
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * perPage.value;
+  const end = start + perPage.value;
+  return actualData.value.slice(start, end);
+});
+
+const paginationStart = computed(() => {
+  if (actualData.value.length === 0) return 0;
+  return ((currentPage.value - 1) * perPage.value) + 1;
+});
+
+const paginationEnd = computed(() => {
+  const end = currentPage.value * perPage.value;
+  return end > actualData.value.length ? actualData.value.length : end;
+});
+
+const visiblePages = computed(() => {
+  const pages = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+
+  if (end > totalPages.value) {
+    end = totalPages.value;
+    start = Math.max(1, end - maxVisible + 1);
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+});
 
 const initReport = () => {
   const type = route.params.type;
@@ -151,6 +224,7 @@ const fetchData = async () => {
     columns.value = res.data.columns;
     data.value = res.data.data;
     title.value = res.data.title;
+    currentPage.value = 1;
   } catch (error) {
     console.error('Failed to fetch report data', error);
   } finally {
@@ -175,16 +249,23 @@ const exportReport = (format) => {
 };
 
 const printReport = () => {
-  const printHeader = document.getElementById('print-header').outerHTML;
-  const printArea = document.getElementById('report-print-area').outerHTML;
-  const originalContents = document.body.innerHTML;
+  // Temporarily disable pagination to print all rows
+  const originalPerPage = perPage.value;
+  perPage.value = actualData.value.length || 10000;
+  
+  // Wait for DOM to update with all rows
+  setTimeout(() => {
+    const printHeader = document.getElementById('print-header').outerHTML;
+    const printArea = document.getElementById('report-print-area').outerHTML;
+    const originalContents = document.body.innerHTML;
 
-  // Temporarily replace body with print content
-  document.body.innerHTML = `<div>${printHeader}${printArea}</div>`;
-  window.print();
-  // Restore original content
-  document.body.innerHTML = originalContents;
-  window.location.reload();
+    document.body.innerHTML = `<div>${printHeader}${printArea}</div>`;
+    window.print();
+    
+    // Restore original content and pagination
+    document.body.innerHTML = originalContents;
+    window.location.reload();
+  }, 100);
 };
 
 const isNumericColumn = (colName) => {
