@@ -68,10 +68,17 @@
             <div class="modal-body">
               <div class="mb-3">
                 <label class="form-label">Category *</label>
-                <select v-model="expenseForm.expense_category_id" class="form-select custom-input" required>
-                  <option value="">Select a category</option>
-                  <option v-for="cat in expenseStore.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                </select>
+                <VueMultiselect
+                  v-model="expenseForm.categoryObj"
+                  :options="expenseStore.categories"
+                  track-by="id"
+                  label="name"
+                  placeholder="Select a category"
+                  :searchable="true"
+                  :close-on-select="true"
+                  :show-labels="false"
+                  class="custom-multiselect"
+                />
               </div>
               <div class="mb-3">
                 <label class="form-label">Amount (৳) *</label>
@@ -83,7 +90,9 @@
               </div>
               <div class="mb-3">
                 <label class="form-label">Description (Optional)</label>
-                <textarea v-model="expenseForm.description" class="form-control custom-input" rows="2"></textarea>
+                <div class="bg-white rounded">
+                  <QuillEditor v-model:content="expenseForm.description" contentType="html" theme="snow" style="min-height: 100px; color: black;" />
+                </div>
               </div>
             </div>
             <div class="modal-footer border-secondary">
@@ -133,6 +142,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useExpenseStore } from '../../../store/expenses';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const expenseStore = useExpenseStore();
 const searchQuery = ref('');
@@ -148,7 +159,7 @@ const editingCatId = ref(null);
 const editingExpenseId = ref(null);
 
 const expenseForm = ref({
-  expense_category_id: '',
+  categoryObj: null,
   amount: '',
   date: new Date().toISOString().split('T')[0],
   description: ''
@@ -202,7 +213,7 @@ const openExpenseModal = (expense = null) => {
   if (expense) {
     editingExpenseId.value = expense.id;
     expenseForm.value = {
-      expense_category_id: expense.expense_category_id,
+      categoryObj: expenseStore.categories.find(c => c.id === expense.expense_category_id) || null,
       amount: expense.amount,
       date: expense.date,
       description: expense.description || ''
@@ -210,7 +221,7 @@ const openExpenseModal = (expense = null) => {
   } else {
     editingExpenseId.value = null;
     expenseForm.value = {
-      expense_category_id: '',
+      categoryObj: null,
       amount: '',
       date: new Date().toISOString().split('T')[0],
       description: ''
@@ -220,16 +231,24 @@ const openExpenseModal = (expense = null) => {
 };
 
 const submitExpense = async () => {
+  if (!expenseForm.value.categoryObj) {
+    alert('Please select a category');
+    return;
+  }
   isSubmitting.value = true;
   try {
+    const payload = {
+      ...expenseForm.value,
+      expense_category_id: expenseForm.value.categoryObj.id
+    };
     if (editingExpenseId.value) {
-      await expenseStore.updateExpense(editingExpenseId.value, expenseForm.value);
+      await expenseStore.updateExpense(editingExpenseId.value, payload);
     } else {
-      await expenseStore.addExpense(expenseForm.value);
+      await expenseStore.addExpense(payload);
     }
     closeExpenseModalBtn.value.click();
   } catch (error) {
-    alert(error.response?.data?.message || 'Failed to save expense');
+    console.error(error);
   } finally {
     isSubmitting.value = false;
   }

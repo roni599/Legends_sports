@@ -11,12 +11,17 @@
     <div class="card shadow-sm mb-4 border-0">
       <div class="card-body bg-light rounded">
         <label class="form-label fw-bold">Select User</label>
-        <select class="form-select form-select-lg" v-model="selectedUserId" @change="loadUserPermissions">
-          <option value="" disabled>-- Choose a user --</option>
-          <option v-for="user in users" :key="user.id" :value="user.id">
-            {{ user.name }} ({{ user.email }}) - {{ user.roles[0]?.name || 'No Role' }}
-          </option>
-        </select>
+        <VueMultiselect
+          v-model="selectedUserObj"
+          :options="users"
+          :custom-label="userLabel"
+          track-by="id"
+          placeholder="-- Choose a user --"
+          :searchable="true"
+          :close-on-select="true"
+          :show-labels="false"
+          @update:modelValue="loadUserPermissions"
+        />
       </div>
     </div>
 
@@ -34,9 +39,15 @@
         <!-- Base Role Selection -->
         <div class="mb-5 p-3 border rounded bg-light">
           <label class="form-label fw-bold text-dark">Primary Role (Template)</label>
-          <select class="form-select" v-model="selectedUserForm.role_id">
-            <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
-          </select>
+          <VueMultiselect
+            v-model="selectedUserForm.roleObj"
+            :options="roles"
+            track-by="id"
+            label="name"
+            placeholder="Select Role"
+            :searchable="false"
+            :show-labels="false"
+          />
           <small class="text-muted mt-2 d-block">Selecting a role applies its base permissions. You can add extra direct permissions below.</small>
         </div>
 
@@ -81,17 +92,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
+import VueMultiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 const users = ref([]);
 const roles = ref([]);
 const permissions = ref([]);
-const selectedUserId = ref('');
+const selectedUserObj = ref(null);
 const isSaving = ref(false);
 
+const selectedUserId = computed(() => selectedUserObj.value?.id || '');
+
+const userLabel = (user) => {
+  return `${user.name} (${user.email}) - ${user.roles?.[0]?.name || 'No Role'}`;
+};
+
 const selectedUserForm = ref({
-  role_id: null,
+  roleObj: null,
   permissions: []
 });
 
@@ -157,7 +176,8 @@ const fetchData = async () => {
 
 const loadUserPermissions = () => {
   if (selectedUser.value) {
-    selectedUserForm.value.role_id = selectedUser.value.roles[0]?.id || null;
+    const roleId = selectedUser.value.roles[0]?.id || null;
+    selectedUserForm.value.roleObj = roles.value.find(r => r.id === roleId) || null;
     selectedUserForm.value.permissions = selectedUser.value.direct_permissions?.map(p => p.id) || [];
   }
 };
@@ -169,7 +189,7 @@ const savePermissions = async () => {
     await axios.put(`/api/users/${selectedUser.value.id}`, {
       name: selectedUser.value.name,
       email: selectedUser.value.email,
-      role_id: selectedUserForm.value.role_id,
+      role_id: selectedUserForm.value.roleObj?.id || null,
       permissions: selectedUserForm.value.permissions
     });
     
