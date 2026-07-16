@@ -158,11 +158,4 @@ const handleLogout = async () => {
   router.push('/login');
 };
 
-const closeAllMenus = () => {
-  const openMenus = document.querySelectorAll('.sidebar-nav .collapse.show');
-  openMenus.forEach(menu => {
-    menu.classList.remove('show');
-    // Also remove the collapsed state from the toggler if we want perfection, but removing show is usually enough
-  });
-};
 </script>
