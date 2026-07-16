@@ -85,7 +85,7 @@ const routes = [
         meta: { permission: 'view_bookings' }
       },
       {
-        path: 'calendar',
+        path: 'bookings/calendar',
         name: 'BookingCalendar',
         component: () => import('./modules/bookings/views/Calendar.vue'),
         meta: { permission: 'view_bookings' }
