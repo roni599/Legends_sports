@@ -44,6 +44,14 @@ export const useRoleStore = defineStore('roles', {
       } catch (err) {
         throw err;
       }
+    },
+    async deleteRole(id) {
+      try {
+        await axios.delete(`/api/roles/${id}`);
+        this.roles = this.roles.filter(r => r.id !== id);
+      } catch (err) {
+        throw err;
+      }
     }
   }
 });

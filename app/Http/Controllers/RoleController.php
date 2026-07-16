@@ -33,4 +33,20 @@ class RoleController extends Controller
 
         return response()->json($role->load('permissions'));
     }
+
+    public function destroy(Role $role)
+    {
+        // Prevent deleting Super Admin
+        if ($role->id === 1 || $role->slug === 'super-admin') {
+            return response()->json(['message' => 'Cannot delete Super Admin role.'], 403);
+        }
+
+        // Prevent deleting if assigned to users
+        if ($role->users()->exists()) {
+            return response()->json(['message' => 'Cannot delete role because it is assigned to users.'], 403);
+        }
+
+        $role->delete();
+        return response()->json(null, 204);
+    }
 }

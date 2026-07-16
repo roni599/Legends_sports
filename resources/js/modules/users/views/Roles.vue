@@ -32,8 +32,11 @@
                 <td>{{ index + 1 }}</td>
                 <td class="fw-bold">{{ role.name }}</td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" @click="editRole(role)">
+                  <button class="btn btn-sm btn-outline-primary me-2" @click="editRole(role)">
                     Edit Permissions
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" @click="deleteRole(role)" v-if="role.slug !== 'super-admin'">
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -183,6 +186,27 @@ const savePermissions = async () => {
   } finally {
     isSaving.value = false;
   }
+};
+
+const deleteRole = (role) => {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: `You are about to delete the role: ${role.name}. This action cannot be undone.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        await roleStore.deleteRole(role.id);
+        Swal.fire('Deleted!', 'Role has been deleted.', 'success');
+      } catch (error) {
+        Swal.fire('Error', error.response?.data?.message || 'Cannot delete this role', 'error');
+      }
+    }
+  });
 };
 </script>
 
