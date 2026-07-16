@@ -10,7 +10,12 @@
     <!-- User Selection -->
     <div class="card shadow-sm mb-4 border-0">
       <div class="card-body bg-light rounded">
-        <label class="form-label fw-bold">Select User</label>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label fw-bold mb-0">Select User</label>
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            + Create New User
+          </button>
+        </div>
         <VueMultiselect
           v-model="selectedUserObj"
           :options="users"
@@ -89,6 +94,54 @@
       </div>
     </div>
   </div>
+
+  <!-- Create User Modal -->
+  <div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Create New User</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="closeCreateUserModal"></button>
+        </div>
+        <form @submit.prevent="submitCreateUser">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">Name</label>
+              <input type="text" class="form-control" v-model="createUserForm.name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Email</label>
+              <input type="email" class="form-control" v-model="createUserForm.email" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Password</label>
+              <input type="password" class="form-control" v-model="createUserForm.password" minlength="6" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Initial Role</label>
+              <VueMultiselect
+                v-model="createUserForm.roleObj"
+                :options="roles"
+                track-by="id"
+                label="name"
+                placeholder="Select Role"
+                :searchable="false"
+                :show-labels="false"
+                required
+              />
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="isCreatingUser">
+              <span v-if="isCreatingUser" class="spinner-border spinner-border-sm me-1"></span>
+              Create User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -112,6 +165,14 @@ const userLabel = (user) => {
 const selectedUserForm = ref({
   roleObj: null,
   permissions: []
+});
+
+const isCreatingUser = ref(false);
+const createUserForm = ref({
+  name: '',
+  email: '',
+  password: '',
+  roleObj: null
 });
 
 const selectedUser = computed(() => {
@@ -206,6 +267,39 @@ const savePermissions = async () => {
     }
   } finally {
     isSaving.value = false;
+  }
+};
+
+const submitCreateUser = async () => {
+  if (!createUserForm.value.roleObj) {
+    alert("Please select a role");
+    return;
+  }
+  isCreatingUser.value = true;
+  try {
+    const res = await axios.post('/api/users', {
+      name: createUserForm.value.name,
+      email: createUserForm.value.email,
+      password: createUserForm.value.password,
+      role_id: createUserForm.value.roleObj.id,
+      permissions: []
+    });
+    
+    await fetchData(); // reload users list
+    
+    // Select the new user automatically
+    selectedUserObj.value = users.value.find(u => u.id === res.data.id);
+    loadUserPermissions();
+    
+    document.getElementById('closeCreateUserModal').click();
+    
+    // Reset form
+    createUserForm.value = { name: '', email: '', password: '', roleObj: null };
+    alert('User created successfully!');
+  } catch (error) {
+    alert('Failed to create user: ' + (error.response?.data?.message || 'Unknown error'));
+  } finally {
+    isCreatingUser.value = false;
   }
 };
 
