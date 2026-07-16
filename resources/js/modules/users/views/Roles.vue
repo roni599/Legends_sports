@@ -1,30 +1,27 @@
 <template>
-  <div class="container-fluid py-4">
-    <div class="row mb-4 align-items-center">
-      <div class="col">
-        <h2 class="h3 mb-0 text-gray-800">User Roles</h2>
-        <p class="text-muted mb-0">Manage system roles and their default permissions.</p>
+  <div class="content-card">
+    <div class="content-header d-flex justify-content-between align-items-center">
+      <div>
+        <h3 class="fs-5 m-0 text-light">User Roles</h3>
+        <p class="text-secondary small mb-0 mt-1">Manage system roles and their default permissions.</p>
       </div>
-      <div class="col-auto">
-        <button class="btn btn-primary" @click="createNewRole" v-if="!isEditorOpen">
-          + Add New Role
-        </button>
-      </div>
+      <button class="btn btn-primary btn-sm" @click="createNewRole" v-if="!isEditorOpen">
+        + Add New Role
+      </button>
     </div>
 
     <!-- Roles Table -->
-    <div class="card shadow-sm border-0 mb-4" v-if="!isEditorOpen">
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>SL</th>
-                <th>Role Name</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
+    <div class="p-4" v-if="!isEditorOpen">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover align-middle">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>Role Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
               <tr v-if="roleStore.loading">
                 <td colspan="3" class="text-center py-4">
                   <span class="spinner-border spinner-border-sm text-primary"></span> Loading...
@@ -49,16 +46,14 @@
           </table>
         </div>
       </div>
-    </div>
-
     <!-- Permissions Editor (Visible only when editing or creating a role) -->
-    <div v-if="isEditorOpen" class="card shadow-sm border-0">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div v-if="isEditorOpen" class="card shadow-sm border-secondary bg-dark text-light">
+      <div class="card-header bg-dark border-secondary py-3 d-flex justify-content-between align-items-center">
         <div>
-          <button class="btn btn-sm btn-outline-secondary me-3" @click="closeEditor">
+          <button class="btn btn-sm btn-outline-secondary me-3 text-light" @click="closeEditor">
             ← Back to Roles
           </button>
-          <h5 class="m-0 fw-bold text-primary d-inline">
+          <h5 class="m-0 fw-bold text-light d-inline">
             {{ isCreating ? 'Create New Role' : 'Permissions for ' + editingRole.name }}
           </h5>
         </div>
@@ -70,11 +65,11 @@
       <div class="card-body">
         
         <div v-if="isCreating" class="mb-4 col-md-6">
-          <label class="form-label fw-bold">Role Name <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" v-model="newRoleName" placeholder="e.g. Area Manager" required>
+          <label class="form-label fw-bold text-light">Role Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control text-dark" v-model="newRoleName" placeholder="e.g. Area Manager" required>
         </div>
 
-        <h6 class="fw-bold text-dark mb-4 border-bottom pb-2">Select Accessible Segments</h6>
+        <h6 class="fw-bold text-light mb-4 border-bottom border-secondary pb-2">Select Accessible Segments</h6>
         
         <div v-if="loadingPermissions" class="text-center py-5">
            <span class="spinner-border spinner-border-sm text-primary"></span> Loading Permissions...
@@ -83,8 +78,8 @@
         <!-- Checkbox Segments -->
         <div class="row g-4" v-else>
           <div class="col-md-6 col-lg-4" v-for="(perms, groupName) in groupedPermissions" :key="groupName">
-            <div class="card h-100 border-primary border-opacity-25 shadow-sm hover-shadow transition">
-              <div class="card-header bg-primary bg-opacity-10 py-3">
+            <div class="card h-100 border-secondary bg-dark shadow-sm hover-shadow transition">
+              <div class="card-header border-secondary py-3">
                 <div class="form-check form-switch d-flex align-items-center">
                   <input class="form-check-input me-3 shadow-none mt-0" 
                          style="width: 40px; height: 20px; cursor:pointer;" 
@@ -92,7 +87,7 @@
                          :id="'group-' + groupName"
                          :checked="isGroupFullySelected(groupName)"
                          @change="toggleGroup(groupName, $event.target.checked)">
-                  <label class="form-check-label fw-bold text-primary m-0" :for="'group-' + groupName" style="cursor:pointer; font-size: 1.1rem;">
+                  <label class="form-check-label fw-bold text-info m-0" :for="'group-' + groupName" style="cursor:pointer; font-size: 1.1rem;">
                     {{ formatGroupName(groupName) }} Segment
                   </label>
                 </div>
@@ -104,7 +99,7 @@
                          :value="permission.id" 
                          v-model="selectedPermissions"
                          :id="'perm-' + permission.id">
-                  <label class="form-check-label text-secondary" :for="'perm-' + permission.id">
+                  <label class="form-check-label text-light" :for="'perm-' + permission.id">
                     {{ permission.name }}
                   </label>
                 </div>

@@ -1,34 +1,29 @@
 <template>
-  <div class="container-fluid py-4">
-    <div class="row mb-4 align-items-center">
-      <div class="col">
-        <h2 class="h3 mb-0 text-gray-800">Users List</h2>
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-primary" @click="openModal(null)">
-          + Add New User
-        </button>
-      </div>
+  <div class="content-card">
+    <div class="content-header d-flex justify-content-between align-items-center">
+      <h3 class="fs-5 m-0 text-light">Users List</h3>
+      <button class="btn btn-primary btn-sm" @click="openModal(null)">
+        + Add New User
+      </button>
     </div>
 
     <!-- Users Table -->
-    <div class="card shadow-sm border-0">
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>SL</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Mobile Number</th>
-                <th>User Type</th>
-                <th>Business Branch</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
+    <div class="p-4">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover align-middle">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Mobile Number</th>
+              <th>User Type</th>
+              <th>Business Branch</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
               <tr v-if="userStore.loading">
                 <td colspan="8" class="text-center py-4">
                   <span class="spinner-border spinner-border-sm text-primary"></span> Loading...
@@ -67,13 +62,12 @@
           </table>
         </div>
       </div>
-    </div>
 
     <!-- Create/Edit Modal -->
     <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog">
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-primary text-white">
+        <div class="modal-content bg-dark text-light border-secondary">
+          <div class="modal-header border-secondary">
             <h5 class="modal-title">{{ isEditing ? 'Edit User' : 'Create New User' }}</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="closeUserModal"></button>
           </div>
@@ -81,19 +75,19 @@
             <div class="modal-body">
               <div class="mb-3">
                 <label class="form-label fw-bold">Name</label>
-                <input type="text" class="form-control" v-model="form.name" required>
+                <input type="text" class="form-control text-dark" v-model="form.name" required>
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Email</label>
-                <input type="email" class="form-control" v-model="form.email" required>
+                <input type="email" class="form-control text-dark" v-model="form.email" required>
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Mobile Number</label>
-                <input type="text" class="form-control" v-model="form.phone">
+                <input type="text" class="form-control text-dark" v-model="form.phone">
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Business Branch</label>
-                <input type="text" class="form-control" v-model="form.business_branch">
+                <input type="text" class="form-control text-dark" v-model="form.business_branch">
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">User Type (Role)</label>
@@ -110,14 +104,14 @@
               </div>
               <div class="mb-3">
                 <label class="form-label fw-bold">Password {{ isEditing ? '(Leave blank to keep unchanged)' : '' }}</label>
-                <input type="password" class="form-control" v-model="form.password" minlength="6" :required="!isEditing">
+                <input type="password" class="form-control text-dark" v-model="form.password" minlength="6" :required="!isEditing">
               </div>
               <div class="mb-3 form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="isActive" v-model="form.is_active">
                 <label class="form-check-label" for="isActive">Status Active</label>
               </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer border-secondary">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="submit" class="btn btn-primary" :disabled="isSaving">
                 <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
