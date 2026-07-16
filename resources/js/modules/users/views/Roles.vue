@@ -6,7 +6,7 @@
         <p class="text-secondary small mb-0 mt-1">Manage system roles and their default permissions.</p>
       </div>
       <div class="d-flex gap-2">
-        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm text-dark" placeholder="Search role name..." style="width: 200px;" v-if="!isEditorOpen">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search role name..." style="width: 200px;" v-if="!isEditorOpen">
         <button class="btn btn-primary btn-sm" @click="createNewRole" v-if="!isEditorOpen">
           + Add New Role
         </button>

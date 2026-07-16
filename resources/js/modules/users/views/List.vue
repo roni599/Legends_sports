@@ -3,7 +3,7 @@
     <div class="content-header d-flex justify-content-between align-items-center">
       <h3 class="fs-5 m-0 text-light">Users List</h3>
       <div class="d-flex gap-2">
-        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm text-dark" placeholder="Search name, email or phone..." style="width: 250px;">
+        <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search name, email or phone..." style="width: 250px;">
         <button class="btn btn-primary btn-sm" @click="openModal(null)">
           + Add New User
         </button>

@@ -17,8 +17,7 @@
         <div class="row g-3 align-items-center">
           <div class="col-md-4">
             <div class="input-group">
-              <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-              <input type="text" class="form-control border-start-0 ps-0" placeholder="Search by ID, Client name or Phone..." v-model="searchQuery" @input="debounceSearch">
+              <input type="text" class="form-control custom-input" placeholder="Search by ID, Client name or Phone..." v-model="searchQuery" @input="debounceSearch">
             </div>
           </div>
           <div class="col-md-3">
