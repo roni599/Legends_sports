@@ -36,8 +36,10 @@
             <small class="text-danger" v-if="groundStore.errors.location">{{ groundStore.errors.location[0] }}</small>
           </div>
           <div class="col-12">
-            <label class="form-label text-light">Description</label>
-            <textarea v-model="form.description" class="form-control custom-input" rows="3"></textarea>
+            <label class="form-label text-light">Description (Rich Text)</label>
+            <div class="bg-white rounded">
+              <QuillEditor v-model:content="form.description" contentType="html" theme="snow" style="min-height: 150px; color: black;" />
+            </div>
           </div>
           <div class="col-12 mt-4">
             <button type="submit" class="btn btn-primary px-4" :disabled="groundStore.loading">
