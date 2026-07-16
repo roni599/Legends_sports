@@ -20,6 +20,9 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:20',
+            'business_branch' => 'nullable|string|max:255',
+            'is_active' => 'boolean',
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'permissions' => 'nullable|array',
@@ -29,6 +32,9 @@ class UserController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'business_branch' => $validated['business_branch'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
             'password' => Hash::make($validated['password']),
         ]);
 
@@ -50,6 +56,9 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'business_branch' => 'nullable|string|max:255',
+            'is_active' => 'boolean',
             'password' => 'nullable|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'permissions' => 'nullable|array',
@@ -58,6 +67,10 @@ class UserController extends Controller
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
+        if (isset($validated['phone'])) $user->phone = $validated['phone'];
+        if (isset($validated['business_branch'])) $user->business_branch = $validated['business_branch'];
+        if (isset($validated['is_active'])) $user->is_active = $validated['is_active'];
+        
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }

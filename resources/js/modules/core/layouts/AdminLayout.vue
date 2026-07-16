@@ -78,14 +78,15 @@
           </div>
         </div>
 
-        <!-- Settings Module -->
+        <!-- Users Module -->
         <div class="nav-item-group" v-if="authStore.hasPermission('view_users')">
-          <a class="nav-item-custom" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="false" aria-controls="settingsMenu">
-            Settings ▾
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#usersMenu" role="button" aria-expanded="false" aria-controls="usersMenu">
+            Users ▾
           </a>
-          <div class="collapse" id="settingsMenu" data-bs-parent="#sidebarAccordion">
+          <div class="collapse" id="usersMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
-              <router-link to="/settings/roles" class="nav-item-custom text-sm mb-1 py-1" active-class="active">User Roles & Permissions</router-link>
+              <router-link to="/users" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Users List</router-link>
+              <router-link to="/users/roles" class="nav-item-custom text-sm mb-1 py-1" active-class="active">User Roles</router-link>
             </div>
           </div>
         </div>

@@ -91,9 +91,15 @@ const routes = [
         meta: { permission: 'view_bookings' }
       },
       {
-        path: 'settings/roles',
-        name: 'SettingsRoles',
-        component: () => import('./modules/settings/views/UserPermissions.vue'),
+        path: 'users',
+        name: 'UserList',
+        component: () => import('./modules/users/views/List.vue'),
+        meta: { permission: 'view_users' }
+      },
+      {
+        path: 'users/roles',
+        name: 'UserRoles',
+        component: () => import('./modules/users/views/Roles.vue'),
         meta: { permission: 'view_users' }
       },
       {
