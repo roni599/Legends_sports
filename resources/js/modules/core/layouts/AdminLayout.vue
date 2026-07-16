@@ -7,7 +7,7 @@
       </div>
       <nav class="sidebar-nav" id="sidebarAccordion">
         <!-- Dashboard -->
-        <router-link to="/" class="nav-item-custom" active-class="active">
+        <router-link to="/" class="nav-item-custom" active-class="active" data-bs-toggle="collapse" data-bs-target=".collapse.show">
           Dashboard
         </router-link>
 
