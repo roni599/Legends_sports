@@ -12,8 +12,8 @@
       </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-bottom-0 pt-4 pb-3">
+    <div class="content-card">
+      <div class="p-3 border-bottom border-secondary">
         <div class="row g-3 align-items-center">
           <div class="col-md-4">
             <div class="input-group">
@@ -43,10 +43,10 @@
       </div>
       
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+        <table class="table table-dark table-striped table-hover align-middle mb-0">
+          <thead>
             <tr>
-              <th class="ps-4">ID</th>
+              <th class="ps-4">SL</th>
               <th>Client</th>
               <th>Ground</th>
               <th>Date & Time</th>
@@ -68,8 +68,8 @@
                 No bookings found matching your criteria.
               </td>
             </tr>
-            <tr v-else v-for="booking in bookings" :key="booking.id">
-              <td class="ps-4 fw-bold text-secondary">#{{ booking.id }}</td>
+            <tr v-else v-for="(booking, index) in bookings" :key="booking.id">
+              <td class="ps-4 fw-bold text-secondary">{{ (pagination.current_page - 1) * 10 + index + 1 }}</td>
               <td>
                 <div class="fw-bold">{{ booking.client?.name }}</div>
                 <small class="text-muted d-flex align-items-center mt-1">
@@ -88,7 +88,7 @@
               </td>
               <td>
                 <div v-for="slot in booking.slots" :key="slot.id">
-                  <div class="fw-bold text-dark">{{ formatDate(slot.date) }}</div>
+                  <div class="fw-bold">{{ formatDate(slot.date) }}</div>
                   <small class="text-primary">{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</small>
                 </div>
               </td>
@@ -124,9 +124,9 @@
         </table>
       </div>
       
-      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+      <div class="d-flex justify-content-between align-items-center p-3 mt-2" v-if="pagination && pagination.total > 0">
         <div class="text-secondary small mb-2 mb-md-0">
-          Showing {{ pagination.from }} to {{ pagination.to }} of {{ pagination.total }} entries
+          Showing {{ pagination.from || 0 }} to {{ pagination.to || 0 }} of {{ pagination.total || 0 }} entries
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" :disabled="pagination.current_page === 1" @click="fetchBookings(pagination.current_page - 1)">Previous</button>
