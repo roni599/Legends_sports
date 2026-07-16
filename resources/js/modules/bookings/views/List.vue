@@ -107,20 +107,14 @@
         </table>
       </div>
       
-      <div class="card-footer bg-white pt-4 pb-3" v-if="pagination.last_page > 1">
-        <nav>
-          <ul class="pagination justify-content-center mb-0">
-            <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
-              <button class="page-link" @click="fetchBookings(pagination.current_page - 1)">Previous</button>
-            </li>
-            <li class="page-item disabled">
-              <span class="page-link">Page {{ pagination.current_page }} of {{ pagination.last_page }}</span>
-            </li>
-            <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
-              <button class="page-link" @click="fetchBookings(pagination.current_page + 1)">Next</button>
-            </li>
-          </ul>
-        </nav>
+      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+        <div class="text-secondary small mb-2 mb-md-0">
+          Showing {{ pagination.from }} to {{ pagination.to }} of {{ pagination.total }} entries
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" :disabled="pagination.current_page === 1" @click="fetchBookings(pagination.current_page - 1)">Previous</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="pagination.current_page === pagination.last_page" @click="fetchBookings(pagination.current_page + 1)">Next</button>
+        </div>
       </div>
     </div>
 
@@ -192,7 +186,7 @@ const isLoading = ref(true);
 const searchQuery = ref('');
 const statusFilter = ref('');
 const dateFilter = ref('');
-const pagination = ref({ current_page: 1, last_page: 1 });
+const pagination = ref({ current_page: 1, last_page: 1, total: 0, per_page: 10, from: 0, to: 0 });
 let searchTimeout = null;
 
 const showModal = ref(false);
@@ -214,7 +208,11 @@ const fetchBookings = async (page = 1) => {
     bookings.value = data.data;
     pagination.value = {
       current_page: data.current_page,
-      last_page: data.last_page
+      last_page: data.last_page,
+      total: data.total,
+      per_page: data.per_page,
+      from: data.from || (bookings.value.length === 0 ? 0 : ((data.current_page - 1) * data.per_page) + 1),
+      to: data.to || Math.min(data.current_page * data.per_page, data.total)
     };
   } catch (error) {
     console.error('Error fetching bookings:', error);
