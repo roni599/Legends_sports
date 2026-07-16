@@ -131,6 +131,18 @@ const routes = [
         name: 'MonthClosing',
         component: () => import('./modules/accounting/views/MonthClosing.vue'),
         meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'reports/cash-flow',
+        name: 'CashFlowReport',
+        component: () => import('./modules/reports/views/CashFlow.vue'),
+        meta: { permission: 'manage_bookings' }
+      },
+      {
+        path: 'reports/:type',
+        name: 'GenericReport',
+        component: () => import('./modules/reports/views/GenericReport.vue'),
+        meta: { permission: 'manage_bookings' }
       }
     ]
   },

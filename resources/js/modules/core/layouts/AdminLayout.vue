@@ -7,7 +7,7 @@
       </div>
       <nav class="sidebar-nav" id="sidebarAccordion">
         <!-- Dashboard -->
-        <router-link to="/" class="nav-item-custom" active-class="active">
+        <router-link to="/" class="nav-item-custom" active-class="active" @click="closeAllMenus">
           Dashboard
         </router-link>
 
@@ -61,6 +61,27 @@
               <router-link to="/suppliers" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Suppliers</router-link>
               <router-link to="/purchases" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Purchases</router-link>
               <router-link to="/month-closing" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Month Closing</router-link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Module (Phase 4) -->
+        <div class="nav-item-group" v-if="authStore.hasPermission('view_bookings')">
+          <a class="nav-item-custom" data-bs-toggle="collapse" href="#reportMenu" role="button" aria-expanded="false" aria-controls="reportMenu">
+            Reports ▾
+          </a>
+          <div class="collapse" id="reportMenu" data-bs-parent="#sidebarAccordion">
+            <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
+              <router-link to="/reports/income" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Income Report</router-link>
+              <router-link to="/reports/expense" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Expense Report</router-link>
+              <router-link to="/reports/cash-flow" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Cash Flow</router-link>
+              <router-link to="/reports/sales" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Sales Report</router-link>
+              <router-link to="/reports/clients" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client Report</router-link>
+              <router-link to="/reports/client-ground" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client with Ground</router-link>
+              <router-link to="/reports/suppliers" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Supplier Report</router-link>
+              <router-link to="/reports/products" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Product Report</router-link>
+              <router-link to="/reports/stock" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Stock Report</router-link>
+              <router-link to="/reports/grounds" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Ground Status</router-link>
             </div>
           </div>
         </div>
@@ -121,6 +142,15 @@ import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
+
+const closeAllMenus = () => {
+  const openMenus = document.querySelectorAll('#sidebarAccordion .collapse.show');
+  openMenus.forEach(menu => {
+    menu.classList.remove('show');
+    const trigger = document.querySelector(`[aria-controls="${menu.id}"]`);
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  });
+};
 
 const handleLogout = async () => {
   await authStore.logout();

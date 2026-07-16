@@ -9,18 +9,55 @@ class ClientController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Client::latest();
+        $query = Client::with(['bookings.ground', 'bookings.slots'])->latest();
         
         if ($request->has('search')) {
             $search = $request->search;
             $query->where('name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%");
         }
-        if ($request->has('all')) {
-            return $query->get();
-        }
         
-        return $query->paginate(10);
+        $clients = $request->has('all') ? $query->get() : $query->paginate(10);
+
+        $transformClient = function ($cli) {
+            $totalPlays = 0;
+            $grounds = [];
+            $slotDetails = [];
+            $totalBilled = 0;
+            $totalPaid = 0;
+            foreach ($cli->bookings as $bkg) {
+                if ($bkg->status !== 'cancelled') {
+                    $totalPlays += $bkg->slots->count();
+                    $groundName = $bkg->ground ? $bkg->ground->name : 'Unknown';
+                    $grounds[$groundName] = true;
+                    
+                    foreach ($bkg->slots as $slot) {
+                        $slotDetails[] = $groundName . ' - ' . date('h:i A', strtotime($slot->time_start)) . ' (৳' . $slot->price . ')';
+                    }
+                    $totalBilled += $bkg->net_amount;
+                    $totalPaid += $bkg->paid_amount;
+                }
+            }
+            
+            $displaySlots = count($slotDetails) > 3 ? implode("\n", array_slice($slotDetails, 0, 3)) . "\n...and " . (count($slotDetails) - 3) . " more" : implode("\n", $slotDetails);
+            
+            $cli->booked_slots = $displaySlots ?: 'No Plays';
+            $cli->play_time = $totalPlays;
+            $cli->total_billed = $totalBilled;
+            $cli->total_paid = $totalPaid;
+            $cli->due_amount = $cli->total_due > 0 ? $cli->total_due : 0;
+            $cli->advance_amount = $cli->total_due < 0 ? abs($cli->total_due) : 0;
+            
+            return $cli;
+        };
+
+        if ($request->has('all')) {
+            $clients->transform($transformClient);
+        } else {
+            $clients->getCollection()->transform($transformClient);
+        }
+
+        return $clients;
     }
 
     public function store(Request $request)

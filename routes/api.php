@@ -78,4 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_bookings')->get('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'show']);
     Route::middleware(['permission:edit_bookings', App\Http\Middleware\CheckMonthLock::class])->put('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'update']);
     Route::middleware(['permission:delete_bookings', App\Http\Middleware\CheckMonthLock::class])->delete('bookings/{booking}', [App\Http\Controllers\BookingController::class, 'destroy']);
+
+    // Reports (Phase 4)
+    Route::middleware('permission:view_bookings')->get('reports/income-expense', [App\Http\Controllers\ReportController::class, 'incomeExpense']);
+    Route::middleware('permission:view_bookings')->get('reports/cash-flow', [App\Http\Controllers\ReportController::class, 'cashFlow']);
+    Route::middleware('permission:view_bookings')->get('reports/{type}', [App\Http\Controllers\ReportController::class, 'genericReport']);
 });
