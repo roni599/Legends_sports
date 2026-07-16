@@ -18,6 +18,7 @@
       <FullCalendar ref="fullCalendar" :options="calendarOptions" />
     </div>
 
+
     <!-- Booking Modal Placeholders (We will implement the modal component next) -->
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal fade show d-block" tabindex="-1">
