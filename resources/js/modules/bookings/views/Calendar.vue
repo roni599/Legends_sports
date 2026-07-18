@@ -73,7 +73,15 @@ const calendarOptions = {
   allDaySlot: false,
   selectable: true,
   selectMirror: true,
-  selectAllow: (selectInfo) => selectInfo.start >= new Date(),
+  selectAllow: () => true,
+  dayCellClassNames: (arg) => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return arg.date < today ? 'fc-day-disabled' : '';
+  },
+  slotLaneClassNames: (arg) => {
+    return arg.isPast ? 'fc-slot-disabled' : '';
+  },
   select: handleDateSelect,
   eventClick: handleEventClick,
   events: [],
@@ -222,15 +230,8 @@ onMounted(() => {
 :deep(.fc-daygrid-day.fc-day-disabled .fc-daygrid-day-frame) {
   opacity: 0.5;
 }
-:deep(.fc-timegrid-slot.fc-slot-disabled) {
+:deep(.fc-slot-disabled) {
   cursor: not-allowed !important;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 5px,
-    rgba(0,0,0,0.03) 5px,
-    rgba(0,0,0,0.03) 10px
-  );
 }
 :deep(.fc-toolbar-title) {
   font-size: 1.25rem !important;
