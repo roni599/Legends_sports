@@ -4,9 +4,9 @@
       <h3 class="fs-5 m-0 text-light">Client List</h3>
       <div class="d-flex gap-2">
         <input type="text" v-model="searchQuery" @input="handleSearch" class="form-control form-control-sm custom-input" placeholder="Search name or phone..." style="width: 200px;">
-        <router-link to="/clients/create" class="btn btn-primary btn-sm">
+        <button class="btn btn-primary btn-sm" @click="openModal">
           + Add New Client
-        </router-link>
+        </button>
       </div>
     </div>
     <div class="p-4">
@@ -19,7 +19,6 @@
               <th>Phone</th>
               <th>Email</th>
               <th>Address</th>
-              <th>Booked Slots</th>
               <th class="text-center">Play Time</th>
               <th class="text-end">Total Billed</th>
               <th class="text-end">Total Paid</th>
@@ -30,17 +29,17 @@
           </thead>
           <tbody>
             <tr v-if="clientStore.loading">
-              <td colspan="12" class="text-center py-4">Loading clients...</td>
+              <td colspan="11" class="text-center py-4">Loading clients...</td>
             </tr>
             <tr v-else-if="clientStore.clients.length === 0">
-              <td colspan="12" class="text-center py-4">No clients found</td>
+              <td colspan="11" class="text-center py-4">No clients found</td>
             </tr>
             <tr v-else v-for="(client, index) in clientStore.clients" :key="client.id">
-              <td>{{ (clientStore.page - 1) * 10 + index + 1 }}</td>
-              <td class="fw-bold">{{ client.name }}</td>
+              <td class="text-white">{{ (clientStore.page - 1) * 10 + index + 1 }}</td>
+              <td class="fw-bold text-white">{{ client.name }}</td>
               <td>
                 <div class="d-flex align-items-center gap-2">
-                  <span>{{ client.phone }}</span>
+                  <span class="text-white">{{ client.phone }}</span>
                   <a :href="'https://wa.me/' + (client.phone.startsWith('0') ? '88' + client.phone : client.phone).replace(/[^0-9]/g, '')" target="_blank" class="btn btn-sm btn-success p-1 lh-1" title="WhatsApp">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
                   </a>
@@ -49,27 +48,28 @@
                   </a>
                 </div>
               </td>
-              <td class="small">{{ client.email || '-' }}</td>
-              <td class="small">{{ client.address || '-' }}</td>
-              <td style="white-space: pre-line;" class="small text-muted">{{ client.booked_slots }}</td>
-              <td class="text-center">{{ client.play_time || 0 }}</td>
-              <td class="text-end">{{ client.total_billed || 0 }}</td>
-              <td class="text-end">{{ client.total_paid || 0 }}</td>
+              <td class="small text-light">{{ client.email || '-' }}</td>
+              <td class="small text-light">{{ client.address || '-' }}</td>
+              <td class="text-center text-white">{{ client.play_time || 0 }}</td>
+              <td class="text-end text-white">{{ client.total_billed || 0 }}</td>
+              <td class="text-end text-white">{{ client.total_paid || 0 }}</td>
               <td class="text-end" :class="{'text-danger fw-bold': client.due_amount > 0}">{{ client.due_amount || 0 }}</td>
               <td class="text-end" :class="{'text-success fw-bold': client.advance_amount > 0}">{{ client.advance_amount || 0 }}</td>
               <td class="text-end">
-                <button @click="openLedger(client)" class="btn btn-sm btn-warning me-1 text-dark fw-bold">Ledger</button>
-                <router-link :to="`/clients/${client.id}/edit`" class="btn btn-sm btn-outline-info me-1">Edit</router-link>
-                <button @click="clientStore.deleteClient(client.id)" class="btn btn-sm btn-outline-danger">Delete</button>
+                <span v-if="client.status === 'deactive'" class="badge bg-danger me-1">Deactive</span>
+                <div class="dropdown" @click.stop>
+                  <button class="btn btn-sm btn-outline-light border-0 px-2 py-0" @click="toggleDropdown(client.id, $event)">
+                    <i class="bi bi-three-dots-vertical fs-5"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      
-      <!-- Pagination Design per user requirement -->
+
       <div class="d-flex justify-content-between align-items-center mt-3" v-if="clientStore.total > 0">
-        <span class="text-secondary small">
+        <span class="text-light small">
           Showing {{ ((clientStore.page - 1) * 10) + 1 }} to {{ Math.min(clientStore.page * 10, clientStore.total) }} of {{ clientStore.total }} entries
         </span>
         <div class="btn-group">
@@ -78,159 +78,210 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Ledger Modal -->
-    <div class="modal fade" id="ledgerModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark text-light border-secondary">
-          <div class="modal-header border-secondary">
-            <h5 class="modal-title">Financial Ledger: {{ selectedClient?.name }}</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body p-0">
-            <div class="p-3 bg-secondary bg-opacity-25 border-bottom border-secondary d-flex justify-content-between align-items-center">
-              <div><strong>Total Bookings:</strong> {{ clientLedger.length }}</div>
-              <div class="d-flex align-items-center gap-3">
-                <span class="fs-5"><strong class="text-danger">Total Due:</strong> ৳ {{ selectedClient?.total_due }}</span>
-                <a v-if="selectedClient?.total_due > 0 && selectedClient?.phone" 
-                   :href="'https://wa.me/' + (selectedClient.phone.startsWith('0') ? '88' + selectedClient.phone : selectedClient.phone).replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(`Dear ${selectedClient.name}, this is a gentle reminder from Legends Multi Sports Arena. Your current total due is ৳${selectedClient.total_due}. Please clear it at your earliest convenience. Thank you!`)" 
-                   target="_blank" 
-                   class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
-                  Reminder
-                </a>
-                <button v-if="selectedClient?.total_due > 0" @click="showPaymentForm = !showPaymentForm" class="btn btn-sm btn-success fw-bold">
-                  {{ showPaymentForm ? 'Cancel Payment' : 'Receive Due' }}
+  <!-- 3-Dot Dropdown Menu -->
+  <Teleport to="body">
+    <div v-if="openDropdown" class="dropdown-backdrop" @click="openDropdown = null"></div>
+    <ul v-if="openDropdown" class="custom-dropdown-menu" :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px' }">
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/ledger`" @click="openDropdown = null"><i class="bi bi-journal-text me-2"></i>Ledger</router-link></li>
+      <li v-if="dropdownClient.due_amount > 0"><a class="dropdown-item" href="#" @click.prevent="openPayModal"><i class="bi bi-cash me-2"></i>Receive Payment</a></li>
+      <li><a class="dropdown-item" href="#" @click.prevent="handleToggleStatus">
+        <i :class="dropdownClient.status === 'active' ? 'bi bi-person-dash me-2' : 'bi bi-person-check me-2'"></i>{{ dropdownClient.status === 'active' ? 'Deactive' : 'Active' }}
+      </a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/edit`" @click="openDropdown = null"><i class="bi bi-pencil-square me-2"></i>Edit</router-link></li>
+      <li><a class="dropdown-item text-danger" href="#" @click.prevent="clientStore.deleteClient(dropdownClient.id); openDropdown = null"><i class="bi bi-trash me-2"></i>Delete</a></li>
+    </ul>
+  </Teleport>
+
+  <!-- Client Create Modal -->
+  <div v-if="showModal" class="modal-backdrop fade show" style="background: rgba(0,0,0,0.6);"></div>
+  <div v-if="showModal" class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow" style="background: #1e1e1e;">
+        <div class="modal-header" style="background: #2a2a2a; border-bottom: 1px solid #444;">
+          <h5 class="modal-title fw-bold text-light"><i class="bi bi-person-plus me-2"></i>Add New Client</h5>
+          <button type="button" class="btn-close btn-close-white" @click="closeModal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form @submit.prevent="submitClient">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-light">Client Name *</label>
+                <input type="text" v-model="form.name" class="form-control modal-input" required>
+                <small class="text-danger" v-if="clientStore.errors.name">{{ clientStore.errors.name[0] }}</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-light">Phone Number *</label>
+                <input type="text" v-model="form.phone" class="form-control modal-input" required>
+                <small class="text-danger" v-if="clientStore.errors.phone">{{ clientStore.errors.phone[0] }}</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-light">Email Address</label>
+                <input type="email" v-model="form.email" class="form-control modal-input">
+                <small class="text-danger" v-if="clientStore.errors.email">{{ clientStore.errors.email[0] }}</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-light">Opening Due Amount (৳)</label>
+                <input type="number" v-model="form.total_due" class="form-control modal-input">
+                <small class="text-danger" v-if="clientStore.errors.total_due">{{ clientStore.errors.total_due[0] }}</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label text-light">Address</label>
+                <textarea v-model="form.address" class="form-control modal-input" rows="3"></textarea>
+                <small class="text-danger" v-if="clientStore.errors.address">{{ clientStore.errors.address[0] }}</small>
+              </div>
+              <div class="col-12 mt-4 text-end">
+                <button type="button" class="btn btn-light me-2" @click="closeModal">Cancel</button>
+                <button type="submit" class="btn btn-primary px-4" :disabled="clientStore.loading">
+                  <span v-if="clientStore.loading" class="spinner-border spinner-border-sm me-2"></span>
+                  <i v-else class="bi bi-check-circle me-1"></i> Save Client
                 </button>
               </div>
             </div>
-            
-            <!-- Receive Payment Form -->
-            <div v-if="showPaymentForm" class="p-3 bg-light text-dark border-bottom border-secondary">
-              <h6 class="fw-bold mb-3">Receive Due Payment</h6>
-              <form @submit.prevent="submitDuePayment" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                  <label class="form-label text-sm fw-bold">Amount (৳)</label>
-                  <input type="number" v-model.number="paymentForm.amount" class="form-control form-control-sm" :max="selectedClient?.total_due" min="1" required>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label text-sm fw-bold">Payment Method</label>
-                  <select v-model="paymentForm.payment_method" class="form-select form-select-sm" required>
-                    <option value="cash">Cash</option>
-                    <option value="bkash">bKash</option>
-                    <option value="bank">Bank Transfer</option>
-                    <option value="card">Card</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <button type="submit" class="btn btn-success btn-sm w-100 fw-bold" :disabled="isSubmittingPayment">
-                    <span v-if="isSubmittingPayment" class="spinner-border spinner-border-sm me-1"></span>
-                    Confirm Payment
-                  </button>
-                </div>
-              </form>
-            </div>
-            
-            <!-- Tabs for Ledger / Payments -->
-            <ul class="nav nav-tabs nav-fill bg-dark border-bottom-0" id="ledgerTabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active text-light bg-dark border-0 rounded-0 border-bottom border-primary" id="bookings-tab" data-bs-toggle="tab" data-bs-target="#bookings" type="button" role="tab">Booking History</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link text-light bg-dark border-0 rounded-0" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">Due Collections</button>
-              </li>
-            </ul>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            <div class="tab-content" id="ledgerTabsContent">
-              <!-- Bookings Tab -->
-              <div class="tab-pane fade show active" id="bookings" role="tabpanel">
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                  <table class="table table-dark table-striped table-hover mb-0 text-sm">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Ground</th>
-                        <th>Status</th>
-                        <th class="text-end">Total Amount</th>
-                        <th class="text-end">Paid</th>
-                        <th class="text-end">Due</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-if="isLoadingLedger">
-                        <td colspan="6" class="text-center py-4">Loading bookings...</td>
-                      </tr>
-                      <tr v-else-if="clientLedger.length === 0">
-                        <td colspan="6" class="text-center py-4">No booking history found</td>
-                      </tr>
-                      <tr v-else v-for="booking in clientLedger" :key="booking.id">
-                        <td>{{ new Date(booking.created_at).toLocaleDateString() }}</td>
-                        <td>{{ booking.ground.name }}</td>
-                        <td>
-                          <span class="badge" :class="booking.status === 'completed' ? 'bg-success' : (booking.status === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark')">
-                            {{ booking.status }}
-                          </span>
-                        </td>
-                        <td class="text-end">৳ {{ booking.total_amount }}</td>
-                        <td class="text-end text-success">৳ {{ booking.paid_amount }}</td>
-                        <td class="text-end" :class="{'text-danger fw-bold': booking.due_amount > 0}">৳ {{ booking.due_amount }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Payments Tab -->
-              <div class="tab-pane fade" id="payments" role="tabpanel">
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                  <table class="table table-dark table-striped table-hover mb-0 text-sm">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Transaction ID</th>
-                        <th>Method</th>
-                        <th class="text-end text-success">Amount Received</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-if="isLoadingLedger">
-                        <td colspan="4" class="text-center py-4">Loading payments...</td>
-                      </tr>
-                      <tr v-else-if="clientPayments.length === 0">
-                        <td colspan="4" class="text-center py-4">No due collections found</td>
-                      </tr>
-                      <tr v-else v-for="payment in clientPayments" :key="payment.id">
-                        <td>{{ new Date(payment.created_at).toLocaleString() }}</td>
-                        <td>{{ payment.transaction_id }}</td>
-                        <td class="text-uppercase">{{ payment.payment_method }}</td>
-                        <td class="text-end fw-bold text-success">৳ {{ payment.amount }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+  <!-- Receive Payment Modal -->
+  <div v-if="showPayModal" class="modal-backdrop fade show" style="background: rgba(0,0,0,0.6);"></div>
+  <div v-if="showPayModal" class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow" style="background: #1e1e1e;">
+        <div class="modal-header" style="background: #2a2a2a; border-bottom: 1px solid #444;">
+          <h5 class="modal-title fw-bold text-light"><i class="bi bi-cash me-2"></i>Receive Payment</h5>
+          <button type="button" class="btn-close btn-close-white" @click="closePayModal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <span class="text-light">Client: <strong>{{ dropdownClient?.name }}</strong></span>
+            <span class="ms-3 text-danger fw-bold">Due: ৳{{ dropdownClient?.due_amount }}</span>
           </div>
-          <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <div class="mb-3">
+            <label class="form-label text-light">Amount (৳) *</label>
+            <input type="number" v-model="payAmount" class="form-control modal-input" min="1" :max="dropdownClient?.due_amount" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-light">Payment Method *</label>
+            <select v-model="payMethod" class="form-select modal-input" required>
+              <option value="cash">Cash</option>
+              <option value="bkash">bKash</option>
+              <option value="bank">Bank Transfer</option>
+              <option value="card">Card</option>
+            </select>
+          </div>
+          <div class="text-end">
+            <button type="button" class="btn btn-light me-2" @click="closePayModal">Cancel</button>
+            <button type="button" class="btn btn-success px-4" @click="submitPayment" :disabled="paySubmitting">
+              <span v-if="paySubmitting" class="spinner-border spinner-border-sm me-2"></span>
+              <i v-else class="bi bi-check-circle me-1"></i> Confirm
+            </button>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import Swal from 'sweetalert2';
+import axios from 'axios';
 import { useClientStore } from '../../../store/clients';
 
 const clientStore = useClientStore();
 const searchQuery = ref('');
+const openDropdown = ref(null);
+const dropdownPos = ref({ top: 0, left: 0 });
+const dropdownClient = ref(null);
 let searchTimeout = null;
+
+const showModal = ref(false);
+const form = ref({ name: '', phone: '', email: '', total_due: 0, address: '' });
+
+const showPayModal = ref(false);
+const payAmount = ref(0);
+const payMethod = ref('cash');
+const paySubmitting = ref(false);
+
+const toggleDropdown = (id, event) => {
+  if (openDropdown.value === id) {
+    openDropdown.value = null;
+    return;
+  }
+  const rect = event.target.getBoundingClientRect();
+  dropdownPos.value = { top: rect.bottom + 4, left: rect.right - 160 };
+  dropdownClient.value = clientStore.clients.find(c => c.id === id);
+  openDropdown.value = id;
+};
+
+const closeDropdown = () => {
+  openDropdown.value = null;
+};
+
+const handleToggleStatus = async () => {
+  const newStatus = await clientStore.toggleStatus(dropdownClient.value.id);
+  if (newStatus) {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Client ${newStatus === 'active' ? 'activated' : 'deactivated'}!`, showConfirmButton: false, timer: 2000 });
+  }
+  openDropdown.value = null;
+};
+
+const openPayModal = () => {
+  payAmount.value = dropdownClient.value.due_amount;
+  payMethod.value = 'cash';
+  showPayModal.value = true;
+  openDropdown.value = null;
+};
+
+const closePayModal = () => {
+  showPayModal.value = false;
+  paySubmitting.value = false;
+};
+
+const submitPayment = async () => {
+  if (!payAmount.value || payAmount.value <= 0) return;
+  paySubmitting.value = true;
+  try {
+    await axios.post(`/api/clients/${dropdownClient.value.id}/receive-payment`, {
+      amount: payAmount.value,
+      payment_method: payMethod.value
+    });
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Payment received!', showConfirmButton: false, timer: 2000 });
+    closePayModal();
+    clientStore.fetchClients(clientStore.page, searchQuery.value);
+  } catch (error) {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: error.response?.data?.message || 'Payment failed', showConfirmButton: false, timer: 3000 });
+    paySubmitting.value = false;
+  }
+};
+
+const openModal = () => {
+  clientStore.errors = {};
+  form.value = { name: '', phone: '', email: '', total_due: 0, address: '' };
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  clientStore.errors = {};
+};
+
+const submitClient = async () => {
+  const success = await clientStore.createClient(form.value);
+  if (success) {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Client added successfully!', showConfirmButton: false, timer: 3000 });
+    clientStore.fetchClients(clientStore.page, searchQuery.value);
+    closeModal();
+  }
+};
 
 onMounted(() => {
   clientStore.fetchClients();
+  document.addEventListener('click', closeDropdown);
 });
 
 const handleSearch = () => {
@@ -243,71 +294,63 @@ const handleSearch = () => {
 const changePage = (page) => {
   clientStore.fetchClients(page, searchQuery.value);
 };
-
-// Ledger Logic
-import axios from 'axios';
-const selectedClient = ref(null);
-const clientLedger = ref([]);
-const clientPayments = ref([]);
-const isLoadingLedger = ref(false);
-let bsLedgerModal = null;
-
-// Payment Form Logic
-const showPaymentForm = ref(false);
-const isSubmittingPayment = ref(false);
-const paymentForm = ref({
-  amount: 0,
-  payment_method: 'cash'
-});
-
-onMounted(() => {
-  bsLedgerModal = new bootstrap.Modal(document.getElementById('ledgerModal'));
-});
-
-const openLedger = async (client) => {
-  selectedClient.value = client;
-  clientLedger.value = [];
-  clientPayments.value = [];
-  showPaymentForm.value = false;
-  paymentForm.value.amount = client.total_due;
-  bsLedgerModal.show();
-  isLoadingLedger.value = true;
-  
-  try {
-    const response = await axios.get(`/api/clients/${client.id}/ledger`);
-    clientLedger.value = response.data.ledger;
-    clientPayments.value = response.data.payments;
-  } catch (error) {
-    alert('Failed to load ledger data.');
-  } finally {
-    isLoadingLedger.value = false;
-  }
-};
-
-const submitDuePayment = async () => {
-  if (!selectedClient.value) return;
-  isSubmittingPayment.value = true;
-  try {
-    const response = await axios.post(`/api/clients/${selectedClient.value.id}/receive-payment`, paymentForm.value);
-    selectedClient.value = response.data.client;
-    
-    // Update main client list visually
-    const idx = clientStore.clients.findIndex(c => c.id === selectedClient.value.id);
-    if (idx !== -1) {
-      clientStore.clients[idx].total_due = selectedClient.value.total_due;
-    }
-    
-    // Refresh ledger arrays
-    const ledgerRes = await axios.get(`/api/clients/${selectedClient.value.id}/ledger`);
-    clientLedger.value = ledgerRes.data.ledger;
-    clientPayments.value = ledgerRes.data.payments;
-    
-    showPaymentForm.value = false;
-    alert('Payment received successfully!');
-  } catch (error) {
-    alert(error.response?.data?.message || 'Failed to process payment.');
-  } finally {
-    isSubmittingPayment.value = false;
-  }
-};
 </script>
+
+<style scoped>
+.dropdown-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+}
+.modal-input {
+  background-color: #2a2a2a !important;
+  color: #fff !important;
+  border-color: #444 !important;
+}
+.modal-input:focus {
+  background-color: #333 !important;
+  color: #fff !important;
+  border-color: #666 !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+</style>
+
+<style>
+.custom-dropdown-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: 0.5rem 0;
+  margin: 0;
+  background-color: #2b3035;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  list-style: none;
+}
+.custom-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: #dee2e6;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.custom-dropdown-menu .dropdown-item:hover {
+  background-color: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.custom-dropdown-menu .dropdown-item.text-danger {
+  color: #dc3545 !important;
+}
+.custom-dropdown-menu .dropdown-item.text-danger:hover {
+  background-color: rgba(220,53,69,0.15);
+}
+.custom-dropdown-menu .dropdown-divider {
+  border-color: rgba(255,255,255,0.1);
+  margin: 0.25rem 0;
+}
+</style>

@@ -6,7 +6,10 @@
         <p class="text-muted mb-0">View and manage all arena bookings</p>
       </div>
       <div>
-        <router-link :to="{ name: 'BookingCalendar' }" class="btn btn-outline-primary me-2">
+        <router-link to="/bookings/create" class="btn btn-primary me-2">
+          <i class="bi bi-plus-circle me-1"></i> New Booking
+        </router-link>
+        <router-link :to="{ name: 'BookingCalendar' }" class="btn btn-outline-secondary">
           <i class="bi bi-calendar3 me-1"></i> Calendar View
         </router-link>
       </div>
@@ -69,10 +72,10 @@
               </td>
             </tr>
             <tr v-else v-for="(booking, index) in bookings" :key="booking.id">
-              <td class="ps-4 fw-bold text-secondary">{{ (pagination.current_page - 1) * 10 + index + 1 }}</td>
+              <td class="ps-4 fw-bold text-white">{{ (pagination.current_page - 1) * 10 + index + 1 }}</td>
               <td>
-                <div class="fw-bold">{{ booking.client?.name }}</div>
-                <small class="text-muted d-flex align-items-center mt-1">
+                <div class="fw-bold text-white">{{ booking.client?.name }}</div>
+                <small class="d-flex align-items-center mt-1 text-light">
                   <i class="bi bi-telephone-fill me-1"></i>{{ booking.client?.phone }}
                   <a v-if="booking.client?.phone" 
                      :href="'https://wa.me/' + (booking.client.phone.startsWith('0') ? '88' + booking.client.phone : booking.client.phone).replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(`Hello ${booking.client.name}, this is regarding your booking #${booking.id} at ${booking.ground?.name} in Legends Multi Sports Arena.`)" 
@@ -88,12 +91,12 @@
               </td>
               <td>
                 <div v-for="slot in booking.slots" :key="slot.id">
-                  <div class="fw-bold">{{ formatDate(slot.date) }}</div>
-                  <small class="text-primary">{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</small>
+                  <div class="fw-bold text-white">{{ formatDate(slot.date) }}</div>
+                  <small class="text-info">{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</small>
                 </div>
               </td>
               <td>
-                <div class="text-sm">Total: <strong>৳{{ booking.total_amount }}</strong></div>
+                <div class="text-sm text-light">Total: <strong class="text-white">৳{{ booking.total_amount }}</strong></div>
                 <div class="text-sm text-success">Paid: ৳{{ booking.paid_amount }}</div>
                 <div class="text-sm text-danger" v-if="booking.due_amount > 0">
                   Due: ৳{{ booking.due_amount }}
@@ -111,12 +114,9 @@
                   {{ booking.status.toUpperCase() }}
                 </span>
               </td>
-              <td class="text-end pe-4">
-                <button class="btn btn-sm btn-outline-secondary me-2" @click="printInvoice(booking.id)">
-                  <i class="bi bi-printer"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-primary" @click="openManageModal(booking)">
-                  Manage
+              <td class="text-end pe-4" style="position: relative;">
+                <button class="btn btn-sm btn-link text-white p-1" @click.stop="toggleDropdown($event, booking.id)" title="Actions">
+                  <i class="bi bi-three-dots-vertical fs-5"></i>
                 </button>
               </td>
             </tr>
@@ -125,7 +125,7 @@
       </div>
       
       <div class="d-flex justify-content-between align-items-center p-3 mt-2" v-if="pagination && pagination.total > 0">
-        <div class="text-secondary small mb-2 mb-md-0">
+        <div class="text-light small mb-2 mb-md-0">
           Showing {{ pagination.from || 0 }} to {{ pagination.to || 0 }} of {{ pagination.total || 0 }} entries
         </div>
         <div class="btn-group">
@@ -191,12 +191,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Fixed 3-Dot Dropdown -->
+    <Teleport to="body">
+      <div v-if="activeDropdown !== null && activeBooking" class="booking-dropdown-menu" :style="dropdownStyle">
+        <template v-for="item in dropdownItems" :key="item.label || 'div'">
+          <div v-if="item.divider" class="dropdown-divider-custom"></div>
+          <button v-else :class="item.class" @click="item.action">
+            <i :class="item.icon + ' me-2'"></i>{{ item.label }}
+          </button>
+        </template>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const bookings = ref([]);
 const isLoading = ref(true);
@@ -212,6 +225,139 @@ const paymentAmount = ref(0);
 const newStatus = ref('');
 const refundAmount = ref(0);
 const isSubmitting = ref(false);
+const activeDropdown = ref(null);
+const dropdownStyle = ref({});
+
+const toggleDropdown = (event, bookingId) => {
+  event.stopPropagation();
+  if (activeDropdown.value === bookingId) {
+    activeDropdown.value = null;
+    return;
+  }
+  const rect = event.currentTarget.getBoundingClientRect();
+  const b = bookings.value.find(b => b.id === bookingId);
+  const status = b?.status;
+  let itemCount = 0;
+  if (status === 'completed') itemCount = 1;
+  else if (status === 'cancelled') itemCount = 1;
+  else itemCount = 3;
+  const ddHeight = itemCount * 40 + 20;
+  let top = rect.bottom + 4;
+  let left = rect.left - 160;
+  if (left < 8) left = 8;
+  if (top + ddHeight > window.innerHeight) top = rect.top - ddHeight - 4;
+  dropdownStyle.value = { position: 'fixed', top: top + 'px', left: left + 'px', zIndex: 9999 };
+  activeDropdown.value = bookingId;
+};
+
+const activeBooking = computed(() => {
+  return bookings.value.find(b => b.id === activeDropdown.value) || null;
+});
+
+const getSlotTimeStatus = (booking) => {
+  if (!booking?.slots?.length) return 'future';
+  const now = new Date();
+  for (const slot of booking.slots) {
+    const slotStart = new Date(slot.date + 'T' + slot.start_time);
+    let slotEnd = new Date(slot.date + 'T' + slot.end_time);
+    if (slotEnd <= slotStart) slotEnd.setDate(slotEnd.getDate() + 1);
+    if (now >= slotStart && now <= slotEnd) return 'running';
+    if (now > slotEnd) return 'passed';
+  }
+  return 'future';
+};
+
+const dropdownItems = computed(() => {
+  if (!activeBooking.value) return [];
+  const b = activeBooking.value;
+  const status = b.status;
+  const timeStatus = getSlotTimeStatus(b);
+  const items = [];
+
+  if (status === 'cancelled') {
+    items.push({ label: 'Cancelled', class: 'dropdown-item-cancelled', icon: 'bi bi-x-circle', action: () => {} });
+  } else if (status === 'completed') {
+    items.push({ label: 'Print', class: 'dropdown-item-print', icon: 'bi bi-printer', action: () => printInvoice(b.id) });
+  } else if (timeStatus === 'running') {
+    items.push({ label: 'Running', class: 'dropdown-item-running', icon: 'bi bi-play-circle', action: () => changeStatus(b, 'running') });
+    items.push({ label: 'Print', class: 'dropdown-item-print', icon: 'bi bi-printer', action: () => printInvoice(b.id) });
+  } else {
+    if (status === 'pending') {
+      items.push({ label: 'Confirmed', class: 'dropdown-item-confirmed', icon: 'bi bi-check2-circle', action: () => changeStatus(b, 'confirmed') });
+      items.push({ label: 'Cancelled', class: 'dropdown-item-cancelled', icon: 'bi bi-x-circle', action: () => handleCancel(b) });
+    } else if (status === 'confirmed') {
+      items.push({ label: 'Cancelled', class: 'dropdown-item-cancelled', icon: 'bi bi-x-circle', action: () => handleCancel(b) });
+    } else if (status === 'running') {
+      items.push({ label: 'Cancelled', class: 'dropdown-item-cancelled', icon: 'bi bi-x-circle', action: () => handleCancel(b) });
+    }
+    items.push({ divider: true });
+    items.push({ label: 'Print', class: 'dropdown-item-print', icon: 'bi bi-printer', action: () => printInvoice(b.id) });
+  }
+  return items;
+});
+
+const closeDropdown = () => {
+  activeDropdown.value = null;
+};
+
+const changeStatus = async (booking, status) => {
+  closeDropdown();
+  if (booking.status === status) return;
+
+  const result = await Swal.fire({
+    title: `Mark as ${status.charAt(0).toUpperCase() + status.slice(1)}?`,
+    text: `Booking #${booking.id} for ${booking.client?.name}`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#198754',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes'
+  });
+  if (!result.isConfirmed) return;
+
+  try {
+    await axios.put(`/api/bookings/${booking.id}`, { status });
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Booking marked as ${status}!`, showConfirmButton: false, timer: 3000 });
+    fetchBookings(pagination.value.current_page);
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.message || 'Failed to update status', 'error');
+  }
+};
+
+const handleCancel = async (booking) => {
+  closeDropdown();
+  if (booking.status === 'cancelled' || booking.status === 'completed' || booking.status === 'running') {
+    Swal.fire('Cannot Cancel', booking.status === 'running' || booking.status === 'completed'
+      ? 'Cannot cancel a running or completed booking.'
+      : 'Booking is already cancelled.', 'warning');
+    return;
+  }
+  const { value: refundAmount } = await Swal.fire({
+    title: 'Cancel Booking?',
+    html: `<p>Booking #${booking.id} for ${booking.client?.name}</p>
+           <p class="text-danger">This will forgive the due of ৳${booking.due_amount}</p>
+           ${booking.paid_amount > 0 ? `<label class="form-label fw-bold">Refund Amount (Max: ৳${booking.paid_amount})</label>
+           <input id="swal-refund" type="number" class="form-control" min="0" max="${booking.paid_amount}" value="0">` : ''}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Confirm Cancel',
+    preConfirm: () => {
+      const input = document.getElementById('swal-refund');
+      return input ? parseFloat(input.value) || 0 : 0;
+    }
+  });
+  if (refundAmount === undefined) return;
+
+  try {
+    await axios.put(`/api/bookings/${booking.id}`, { status: 'cancelled', refund_amount: refundAmount });
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Booking cancelled!', showConfirmButton: false, timer: 3000 });
+    fetchBookings(pagination.value.current_page);
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.message || 'Failed to cancel', 'error');
+  }
+};
 
 const fetchBookings = async (page = 1) => {
   isLoading.value = true;
@@ -338,6 +484,7 @@ const getStatusBadgeClass = (status) => {
 
 onMounted(() => {
   fetchBookings();
+  document.addEventListener('click', closeDropdown);
 });
 
 const printInvoice = (id) => {
@@ -348,5 +495,58 @@ const printInvoice = (id) => {
 <style scoped>
 .table > :not(caption) > * > * {
   padding: 1rem 0.5rem;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+.custom-input {
+  color: #fff !important;
+}
+select.custom-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  padding-right: 32px;
+}
+.custom-input option {
+  color: #fff !important;
+  background-color: #2a2a2a !important;
+}
+.booking-dropdown-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 6px 0;
+  min-width: 170px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.booking-dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.booking-dropdown-menu button:hover {
+  background: rgba(255,255,255,0.08);
+}
+.dropdown-item-pending { color: #ffc107; }
+.dropdown-item-confirmed { color: #198754; }
+.dropdown-item-running { color: #0dcaf0; }
+.dropdown-item-completed { color: #adb5bd; }
+.dropdown-item-cancelled { color: #dc3545; }
+.dropdown-item-print { color: #fff; }
+.dropdown-divider-custom {
+  height: 1px;
+  background: #444;
+  margin: 4px 0;
 }
 </style>

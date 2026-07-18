@@ -2,22 +2,22 @@
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="mb-1 text-primary fw-bold">{{ title }}</h4>
-        <p class="text-muted mb-0">View and export records</p>
+        <h4 class="mb-1 text-light fw-bold">{{ title }}</h4>
+        <p class="text-secondary mb-0">View and export records</p>
       </div>
     </div>
 
     <!-- Filter Card (Only for Sales) -->
-    <div class="card border-0 shadow-sm mb-4" v-if="isDateFiltered">
-      <div class="card-body">
+    <div class="content-card" v-if="isDateFiltered" style="margin-top: 0;">
+      <div class="p-4">
         <form @submit.prevent="fetchData" class="row g-3 align-items-end">
           <div class="col-md-4">
-            <label class="form-label text-sm fw-medium">Start Date</label>
-            <input type="date" class="form-control" v-model="filter.start_date" required>
+            <label class="form-label text-light text-sm fw-medium">Start Date</label>
+            <input type="date" class="form-control dark-input" v-model="filter.start_date" required>
           </div>
           <div class="col-md-4">
-            <label class="form-label text-sm fw-medium">End Date</label>
-            <input type="date" class="form-control" v-model="filter.end_date" required>
+            <label class="form-label text-light text-sm fw-medium">End Date</label>
+            <input type="date" class="form-control dark-input" v-model="filter.end_date" required>
           </div>
           <div class="col-md-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary" :disabled="isLoading">
@@ -30,9 +30,9 @@
     </div>
 
     <!-- Actions & Data Table Card -->
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-bottom pt-3 pb-3 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0 d-none d-md-block">{{ title }}</h5>
+    <div class="content-card">
+      <div class="content-header">
+        <h5 class="fw-bold mb-0 text-light">{{ title }}</h5>
         
         <div class="d-flex gap-2">
           <button type="button" class="btn btn-outline-danger btn-sm px-3" @click="exportReport('pdf')" :disabled="isLoading || data.length === 0">
@@ -54,10 +54,10 @@
         <p class="text-muted mb-3" v-if="isDateFiltered">{{ filter.start_date }} to {{ filter.end_date }}</p>
       </div>
 
-      <div class="card-body p-0" id="report-print-area">
+      <div class="p-0" id="report-print-area">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+          <table class="table table-dark table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
               <tr>
                 <th v-for="(col, index) in columns" :key="index" :class="{'ps-4': index === 0, 'text-end pe-4': isNumericColumn(col)}">
                   {{ col }}
@@ -73,7 +73,7 @@
                 </td>
               </tr>
               <tr v-else-if="paginatedData.length === 0 && !totalRow">
-                <td :colspan="columns.length" class="text-center py-5 text-muted">
+                <td :colspan="columns.length" class="text-center py-5 text-secondary">
                   No records found.
                 </td>
               </tr>
@@ -84,7 +84,7 @@
               </tr>
               
               <!-- Total Row (Always pinned at the bottom) -->
-              <tr v-if="totalRow" class="table-active fw-bold">
+              <tr v-if="totalRow" class="table-success fw-bold">
                 <td v-for="(col, cIndex) in columns" :key="cIndex" :class="{'ps-4': cIndex === 0, 'text-end pe-4': isNumericColumn(col)}">
                   {{ formatCell(col, totalRow[col]) }}
                 </td>
@@ -95,8 +95,8 @@
       </div>
       
       <!-- Custom Pagination -->
-      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center" v-if="actualData.length > 0">
-        <div class="text-muted text-sm mb-2 mb-md-0">
+      <div class="d-flex justify-content-between align-items-center p-3 mt-2" v-if="actualData.length > 0">
+        <div class="text-light small mb-2 mb-md-0">
           Showing {{ paginationStart }} to {{ paginationEnd }} of {{ actualData.length }} entries
         </div>
         <div class="btn-group">

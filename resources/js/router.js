@@ -43,6 +43,12 @@ const routes = [
         meta: { permission: 'manage_bookings' }
       },
       {
+        path: 'clients/:id/ledger',
+        name: 'ClientLedger',
+        component: () => import('./modules/clients/views/Ledger.vue'),
+        meta: { permission: 'view_clients' }
+      },
+      {
         path: 'grounds',
         name: 'GroundList',
         component: () => import('./modules/grounds/views/List.vue'),
@@ -83,6 +89,12 @@ const routes = [
         name: 'BookingList',
         component: () => import('./modules/bookings/views/List.vue'),
         meta: { permission: 'view_bookings' }
+      },
+      {
+        path: 'bookings/create',
+        name: 'BookingCreate',
+        component: () => import('./modules/bookings/views/Create.vue'),
+        meta: { permission: 'manage_bookings' }
       },
       {
         path: 'bookings/calendar',

@@ -18,8 +18,7 @@
           </a>
           <div class="collapse" id="clientMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
-              <router-link to="/clients" class="nav-item-custom text-sm mb-1 py-1" active-class="active">Client List</router-link>
-              <router-link to="/clients/create" class="nav-item-custom text-sm py-1" active-class="active" v-if="authStore.hasPermission('create_clients')">Add New Client</router-link>
+              <router-link to="/clients" class="nav-item-custom text-sm py-1" active-class="active">Client List</router-link>
             </div>
           </div>
         </div>

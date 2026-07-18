@@ -142,6 +142,22 @@ onMounted(() => {
   margin: 0 auto;
   padding: 40px;
   background: white;
+  color: #212529;
+}
+.print-container .text-muted {
+  color: #6c757d !important;
+}
+.print-container .text-primary {
+  color: #0d6efd !important;
+}
+.print-container .text-success {
+  color: #198754 !important;
+}
+.print-container .text-danger {
+  color: #dc3545 !important;
+}
+.print-container .table {
+  color: #212529;
 }
 
 @media print {

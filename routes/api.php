@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_clients')->get('clients/{client}', [App\Http\Controllers\ClientController::class, 'show']);
     Route::middleware('permission:view_clients')->get('clients/{client}/ledger', [App\Http\Controllers\ClientController::class, 'ledger']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/receive-payment', [App\Http\Controllers\ClientController::class, 'receiveDuePayment']);
+    Route::middleware('permission:edit_clients')->patch('clients/{client}/toggle-status', [App\Http\Controllers\ClientController::class, 'toggleStatus']);
     Route::middleware('permission:edit_clients')->put('clients/{client}', [App\Http\Controllers\ClientController::class, 'update']);
     Route::middleware('permission:delete_clients')->delete('clients/{client}', [App\Http\Controllers\ClientController::class, 'destroy']);
 

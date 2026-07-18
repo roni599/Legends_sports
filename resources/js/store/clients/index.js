@@ -8,7 +8,8 @@ export const useClientStore = defineStore('client', {
     errors: {},
     page: 1,
     total: 0,
-    searchQuery: ''
+    searchQuery: '',
+    allClients: []
   }),
   
   actions: {
@@ -59,6 +60,27 @@ export const useClientStore = defineStore('client', {
         }
         this.loading = false;
         return false;
+      }
+    },
+
+    async toggleStatus(id) {
+      try {
+        const { data } = await axios.patch(`/api/clients/${id}/toggle-status`);
+        const client = this.clients.find(c => c.id === id);
+        if (client) client.status = data.status;
+        return data.status;
+      } catch (error) {
+        console.error('Error toggling status', error);
+        return null;
+      }
+    },
+
+    async fetchAllClients() {
+      try {
+        const { data } = await axios.get('/api/clients?dropdown=true');
+        this.allClients = data;
+      } catch (error) {
+        console.error('Error fetching all clients', error);
       }
     },
 
