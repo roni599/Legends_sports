@@ -34,7 +34,7 @@ class CompleteExpiredBookings extends Command
                 if ($slotEnd->isFuture()) $allExpired = false;
             }
 
-            if ($allExpired && in_array($booking->status, ['pending', 'confirmed', 'running'])) {
+            if ($allExpired && $booking->status === 'running') {
                 $booking->update(['status' => 'completed']);
                 $count++;
             } elseif ($hasStarted && in_array($booking->status, ['pending', 'confirmed'])) {
