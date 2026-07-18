@@ -103,6 +103,14 @@ class PricingRuleController extends Controller
         return response()->json($pricingRule);
     }
 
+    public function toggleStatus(PricingRule $pricingRule)
+    {
+        $pricingRule->update([
+            'status' => $pricingRule->status === 'active' ? 'inactive' : 'active'
+        ]);
+        return response()->json($pricingRule);
+    }
+
     public function destroy(PricingRule $pricingRule)
     {
         $pricingRule->delete();

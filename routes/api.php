@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:create_grounds')->post('pricing-rules', [App\Http\Controllers\PricingRuleController::class, 'store']);
     Route::middleware('permission:view_grounds')->get('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'show']);
     Route::middleware('permission:edit_grounds')->put('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'update']);
+    Route::middleware('permission:edit_grounds')->patch('pricing-rules/{pricing_rule}/toggle-status', [App\Http\Controllers\PricingRuleController::class, 'toggleStatus']);
     Route::middleware('permission:delete_grounds')->delete('pricing-rules/{pricing_rule}', [App\Http\Controllers\PricingRuleController::class, 'destroy']);
 
     // Clients

@@ -118,6 +118,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import Swal from 'sweetalert2';
 import axios from 'axios';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -287,14 +288,14 @@ const submitBooking = async () => {
   isSubmitting.value = true;
   try {
     await axios.post('/api/bookings', form.value);
-    alert('Booking created successfully!');
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Booking created successfully!', showConfirmButton: false, timer: 3000 });
     closeModal();
-    fetchBookings(); // Refresh calendar
+    fetchBookings();
   } catch (error) {
-    const msg = error.response?.data?.errors?.time_slot?.[0] || 
-                error.response?.data?.message || 
+    const msg = error.response?.data?.errors?.time_slot?.[0] ||
+                error.response?.data?.message ||
                 'Failed to create booking';
-    alert('Error: ' + msg);
+    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: msg, showConfirmButton: false, timer: 5000 });
   } finally {
     isSubmitting.value = false;
   }

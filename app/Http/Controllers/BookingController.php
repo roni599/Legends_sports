@@ -273,7 +273,7 @@ class BookingController extends Controller
         $status = ($paidAmount > 0 || $netAmount == 0) ? 'confirmed' : 'pending';
 
         // 4. Save to DB with Transaction and Pessimistic Locking
-        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground) {
+        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground, $appliedRules) {
             
             // Pessimistic Lock on Ground to prevent Race Conditions (Double Booking)
             \App\Models\Ground::where('id', $ground->id)->lockForUpdate()->first();
