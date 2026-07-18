@@ -13,3 +13,4 @@ class MonthlyClosing extends Model
     {
         return $this->belongsTo(User::class, 'closed_by');
     }
+}

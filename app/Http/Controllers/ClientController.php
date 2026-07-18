@@ -9,7 +9,15 @@ class ClientController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Client::with(['bookings.ground', 'bookings.slots'])->latest();
+        // Lightweight dropdown mode: no eager-loaded bookings, no N+1
+        if ($request->has('dropdown')) {
+            return Client::select('id', 'name', 'phone', 'total_due')->latest()->get();
+        }
+
+        $query = Client::with([
+            'bookings.ground:id,name',
+            'bookings.slots:id,booking_id,date,start_time,end_time,price'
+        ])->latest();
         
         if ($request->has('search')) {
             $search = $request->search;
@@ -32,7 +40,9 @@ class ClientController extends Controller
                     $grounds[$groundName] = true;
                     
                     foreach ($bkg->slots as $slot) {
-                        $slotDetails[] = $groundName . ' - ' . date('h:i A', strtotime($slot->time_start)) . ' (৳' . $slot->price . ')';
+                        $date = date('d M', strtotime($slot->date));
+                        $time = date('h:i A', strtotime($slot->start_time)) . ' - ' . date('h:i A', strtotime($slot->end_time));
+                        $slotDetails[] = $groundName . ' | ' . $date . ' ' . $time . ' (৳' . $slot->price . ')';
                     }
                     $totalBilled += $bkg->net_amount;
                     $totalPaid += $bkg->paid_amount;
@@ -106,21 +116,65 @@ class ClientController extends Controller
 
     public function ledger(Client $client)
     {
-        $bookings = \App\Models\Booking::with(['ground', 'slots'])
+        $client->loadCount('bookings');
+
+        $bookings = \App\Models\Booking::with(['ground:id,name', 'slots'])
             ->where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         $payments = \App\Models\Payment::where('client_id', $client->id)
             ->where('type', 'in')
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $totalBookedAmount = 0;
+        $totalPlayAmount = 0;
+        $totalPaid = 0;
+        $totalDue = 0;
+        $totalAdvance = 0;
+        $totalBooked = 0;
+        $totalPlays = 0;
+        $totalBookings = $bookings->count();
+
+        foreach ($bookings as $bkg) {
+            $slots = $bkg->slots;
+            foreach ($slots as $slot) {
+                $totalBookedAmount += floatval($slot->price);
+                $totalBooked++;
+                if ($bkg->status === 'completed') {
+                    $totalPlayAmount += floatval($slot->price);
+                    $totalPlays++;
+                }
+            }
+            $totalPaid += floatval($bkg->paid_amount);
+            $due = floatval($bkg->total_due);
+            if ($due > 0) $totalDue += $due;
+            elseif ($due < 0) $totalAdvance += abs($due);
+        }
+
         return response()->json([
             'client' => $client,
             'ledger' => $bookings,
-            'payments' => $payments
+            'payments' => $payments,
+            'summary' => [
+                'total_bookings' => $totalBookings,
+                'total_booked' => $totalBooked,
+                'total_plays' => $totalPlays,
+                'total_paid' => $totalPaid,
+                'total_due' => $totalDue,
+                'total_advance' => $totalAdvance,
+                'total_booked_amount' => $totalBookedAmount,
+                'total_play_amount' => $totalPlayAmount,
+            ]
         ]);
+    }
+
+    public function toggleStatus(Client $client)
+    {
+        $client->status = $client->status === 'active' ? 'deactive' : 'active';
+        $client->save();
+        return response()->json(['status' => $client->status]);
     }
 
     public function receiveDuePayment(Request $request, Client $client)

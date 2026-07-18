@@ -2,22 +2,22 @@
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="mb-1 text-primary fw-bold">Cash Flow Report</h4>
-        <p class="text-muted mb-0">View and export liquid cash transactions</p>
+        <h4 class="mb-1 text-light fw-bold">Cash Flow Report</h4>
+        <p class="text-secondary mb-0">View and export liquid cash transactions</p>
       </div>
     </div>
 
     <!-- Filter Card -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
+    <div class="content-card" style="margin-top: 0;">
+      <div class="p-4">
         <form @submit.prevent="fetchData" class="row g-3 align-items-end">
           <div class="col-md-4">
-            <label class="form-label text-sm fw-medium">Start Date</label>
-            <input type="date" class="form-control" v-model="filter.start_date" required>
+            <label class="form-label text-light text-sm fw-medium">Start Date</label>
+            <input type="date" class="form-control dark-input" v-model="filter.start_date" required>
           </div>
           <div class="col-md-4">
-            <label class="form-label text-sm fw-medium">End Date</label>
-            <input type="date" class="form-control" v-model="filter.end_date" required>
+            <label class="form-label text-light text-sm fw-medium">End Date</label>
+            <input type="date" class="form-control dark-input" v-model="filter.end_date" required>
           </div>
           <div class="col-md-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary" :disabled="isLoading">
@@ -39,16 +39,16 @@
     </div>
 
     <!-- Data Table Card -->
-    <div class="card border-0 shadow-sm" id="report-print-area">
+    <div class="content-card" id="report-print-area">
       <div class="card-header bg-white border-bottom-0 pt-4 pb-0 d-none d-print-block text-center">
         <h4 class="fw-bold">Legends Sports Arena</h4>
         <h5 class="mb-1">Cash Flow Report</h5>
         <p class="text-muted mb-3">{{ filter.start_date }} to {{ filter.end_date }}</p>
       </div>
-      <div class="card-body p-0">
+      <div class="p-0">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+          <table class="table table-dark table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
               <tr>
                 <th class="ps-4">Date</th>
                 <th>Transaction ID</th>
@@ -66,28 +66,28 @@
                 </td>
               </tr>
               <tr v-else-if="data.length === 0">
-                <td colspan="5" class="text-center py-5 text-muted">
+                <td colspan="5" class="text-center py-5 text-secondary">
                   No records found for the selected date range.
                 </td>
               </tr>
-              <tr v-else v-for="(row, index) in data" :key="index">
+              <tr v-else v-for="(row, index) in paginatedData" :key="index">
                 <td class="ps-4">{{ row['Date'] }}</td>
                 <td>{{ row['Transaction ID'] || 'N/A' }}</td>
                 <td>
                   <span class="badge" :class="row['Type'] === 'IN' ? 'bg-success' : 'bg-danger'">{{ row['Type'] }}</span>
-                  <span class="ms-2 text-muted">{{ row['Method'] }}</span>
+                  <span class="ms-2 text-light">{{ row['Method'] }}</span>
                 </td>
                 <td class="text-end text-success fw-medium">{{ parseFloat(row['Amount (In)']).toLocaleString() }}</td>
                 <td class="text-end text-danger fw-medium pe-4">{{ parseFloat(row['Amount (Out)']).toLocaleString() }}</td>
               </tr>
             </tbody>
-            <tfoot class="table-light fw-bold" v-if="!isLoading && data.length > 0">
+            <tfoot class="table-dark fw-bold" v-if="!isLoading && data.length > 0">
               <tr>
                 <td colspan="3" class="text-end ps-4">TOTAL CASH FLOW:</td>
                 <td class="text-end text-success">৳ {{ parseFloat(summary.total_in).toLocaleString() }}</td>
                 <td class="text-end text-danger pe-4">৳ {{ parseFloat(summary.total_out).toLocaleString() }}</td>
               </tr>
-              <tr class="table-primary text-center">
+              <tr class="table-success text-center">
                 <td colspan="5" class="py-3 fs-5">
                   NET CASH BALANCE: 
                   <span :class="(summary.total_in - summary.total_out) >= 0 ? 'text-success' : 'text-danger'">
@@ -99,16 +99,27 @@
           </table>
         </div>
       </div>
+      <div class="d-flex justify-content-between align-items-center p-3 mt-2" v-if="data.length > 0">
+        <div class="text-light small mb-2 mb-md-0">
+          Showing {{ ((currentPage - 1) * perPage) + 1 }} to {{ Math.min(currentPage * perPage, data.length) }} of {{ data.length }} entries
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage === 1" @click="currentPage--">Previous</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage >= totalPages" @click="currentPage++">Next</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const isLoading = ref(false);
 const data = ref([]);
+const currentPage = ref(1);
+const perPage = ref(10);
 const summary = reactive({
   total_in: 0,
   total_out: 0
@@ -118,6 +129,13 @@ const filter = reactive({
   start_date: '',
   end_date: ''
 });
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * perPage.value;
+  return data.value.slice(start, start + perPage.value);
+});
+
+const totalPages = computed(() => Math.ceil(data.value.length / perPage.value) || 1);
 
 onMounted(() => {
   const today = new Date();
@@ -132,6 +150,7 @@ onMounted(() => {
 
 const fetchData = async () => {
   isLoading.value = true;
+  currentPage.value = 1;
   try {
     const res = await axios.get('/api/reports/cash-flow', {
       params: {

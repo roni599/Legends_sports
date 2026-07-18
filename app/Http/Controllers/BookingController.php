@@ -4,11 +4,40 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class BookingController extends Controller
 {
+    private function timeToMinutes($time)
+    {
+        [$h, $m] = explode(':', $time);
+        return (int)$h * 60 + (int)$m;
+    }
+
+    private function hasConflict($groundId, $date, $startTime, $endTime, $excludeBookingId = null)
+    {
+        $newStart = $this->timeToMinutes($startTime);
+        $newEnd = $this->timeToMinutes($endTime);
+        if ($newEnd <= $newStart) $newEnd += 1440;
+
+        $slots = \App\Models\BookingSlot::whereHas('booking', function ($q) use ($groundId, $excludeBookingId) {
+            $q->where('ground_id', $groundId)->whereIn('status', ['pending', 'confirmed', 'running']);
+            if ($excludeBookingId) $q->where('id', '!=', $excludeBookingId);
+        })->where('date', $date)->get();
+
+        foreach ($slots as $slot) {
+            $sStart = $this->timeToMinutes($slot->start_time);
+            $sEnd = $this->timeToMinutes($slot->end_time);
+            if ($sEnd <= $sStart) $sEnd += 1440;
+
+            if ($newStart < $sEnd && $sStart < $newEnd) return true;
+        }
+        return false;
+    }
     public function index(Request $request)
     {
+        Booking::completeExpired();
+
         $query = Booking::with(['client', 'ground', 'slots'])->latest();
         
         if ($request->has('search')) {
@@ -45,12 +74,17 @@ class BookingController extends Controller
             'ground_id' => 'required|exists:grounds,id',
             'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'end_time' => 'required|date_format:H:i',
             'exclude_booking_id' => 'nullable|exists:bookings,id'
         ]);
 
+        if ($validated['end_time'] === $validated['start_time']) {
+            return response()->json(['errors' => ['time_slot' => ['End time must be different from start time.']]], 422);
+        }
+
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
+        if ($end->lte($start)) $end->addDay();
         $durationMinutes = $end->diffInMinutes($start);
 
         if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
@@ -67,19 +101,13 @@ class BookingController extends Controller
             ]);
         }
 
-        // Check if any slot overlaps with the requested time for the given ground
-        $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
-            $q->where('ground_id', $validated['ground_id'])
-              ->whereIn('status', ['pending', 'confirmed', 'running']); // exclude cancelled
-            
-            if (isset($validated['exclude_booking_id'])) {
-                $q->where('id', '!=', $validated['exclude_booking_id']);
-            }
-        })
-        ->where('date', $validated['date'])
-        ->where('start_time', '<', $validated['end_time'])
-        ->where('end_time', '>', $validated['start_time'])
-        ->exists();
+        $conflict = $this->hasConflict(
+            $validated['ground_id'],
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time'],
+            $validated['exclude_booking_id'] ?? null
+        );
 
         return response()->json([
             'available' => !$conflict,
@@ -93,13 +121,14 @@ class BookingController extends Controller
             'ground_id' => 'required|exists:grounds,id',
             'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'end_time' => 'required|date_format:H:i',
         ]);
 
         $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
         
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
+        if ($end->lte($start)) $end->addDay();
         $durationMinutes = $end->diffInMinutes($start);
 
         if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
@@ -180,10 +209,14 @@ class BookingController extends Controller
             'ground_id' => 'required|exists:grounds,id',
             'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'end_time' => 'required|date_format:H:i',
             'discount' => 'nullable|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
         ]);
+
+        if ($validated['end_time'] === $validated['start_time']) {
+            return response()->json(['message' => 'End time must be different from start time.'], 422);
+        }
 
         $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
         if ($ground->status !== 'active') {
@@ -206,6 +239,7 @@ class BookingController extends Controller
         // 2. Calculate Price
         $start = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = \Carbon\Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
+        if ($end->lte($start)) $end->addDay();
         $durationMinutes = $end->diffInMinutes($start);
 
         if ($durationMinutes < 30 || $durationMinutes % 30 !== 0) {
@@ -273,22 +307,13 @@ class BookingController extends Controller
         $status = ($paidAmount > 0 || $netAmount == 0) ? 'confirmed' : 'pending';
 
         // 4. Save to DB with Transaction and Pessimistic Locking
-        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground) {
+        $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground, $appliedRules) {
             
             // Pessimistic Lock on Ground to prevent Race Conditions (Double Booking)
             \App\Models\Ground::where('id', $ground->id)->lockForUpdate()->first();
 
             // 1. Check Availability (Inside Transaction)
-            $conflict = \App\Models\BookingSlot::whereHas('booking', function($q) use ($validated) {
-                $q->where('ground_id', $validated['ground_id'])
-                  ->whereIn('status', ['pending', 'confirmed', 'running']);
-            })
-            ->where('date', $validated['date'])
-            ->where('start_time', '<', $validated['end_time'])
-            ->where('end_time', '>', $validated['start_time'])
-            ->exists();
-
-            if ($conflict) {
+            if ($this->hasConflict($validated['ground_id'], $validated['date'], $validated['start_time'], $validated['end_time'])) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'time_slot' => ['The selected time slot is already booked.']
                 ]);

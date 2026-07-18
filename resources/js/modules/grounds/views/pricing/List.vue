@@ -39,9 +39,12 @@
               <td>{{ rule.start_time || 'Any' }} - {{ rule.end_time || 'Any' }}</td>
               <td class="text-warning fw-bold">{{ rule.price_modifier > 0 ? '+' : '' }}{{ rule.price_modifier }}</td>
               <td>
-                <span class="badge" :class="rule.status === 'active' ? 'bg-success' : 'bg-danger'">
-                  {{ rule.status.toUpperCase() }}
-                </span>
+                <button class="neon-toggle" :class="{ active: rule.status === 'active' }"
+                  @click="pricingStore.toggleStatus(rule.id)">
+                  <span class="neon-track">
+                    <span class="neon-thumb"></span>
+                  </span>
+                </button>
               </td>
               <td>
                 <router-link :to="`/grounds/pricing/${rule.id}/edit`" class="btn btn-sm btn-outline-info me-2">Edit</router-link>
@@ -52,8 +55,8 @@
         </table>
       </div>
       
-      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
-        <div class="text-secondary small mb-2 mb-md-0">
+      <div class="d-flex justify-content-between align-items-center p-3 mt-2">
+        <div class="text-light small mb-2 mb-md-0">
           Showing {{ pricingStore.rules.length === 0 ? 0 : ((pricingStore.page - 1) * 10) + 1 }} to {{ Math.min(pricingStore.page * 10, pricingStore.total) }} of {{ pricingStore.total }} entries
         </div>
         <div class="btn-group">
@@ -88,3 +91,50 @@ const changePage = (page) => {
   pricingStore.fetchRules(page, searchQuery.value);
 };
 </script>
+
+<style scoped>
+.neon-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.neon-track {
+  display: block;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: #1a1d23;
+  border: 2px solid #2a2d35;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.neon-toggle.active .neon-track {
+  background: #0d2818;
+  border-color: #00e676;
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.3), 0 0 25px rgba(0, 230, 118, 0.15), inset 0 0 10px rgba(0, 230, 118, 0.1);
+}
+.neon-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4a4d55;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.neon-toggle.active .neon-thumb {
+  transform: translateX(24px);
+  background: #00e676;
+  box-shadow: 0 0 8px #00e676, 0 0 20px rgba(0, 230, 118, 0.5), 0 2px 6px rgba(0,0,0,0.3);
+}
+.neon-toggle:hover .neon-track {
+  border-color: #3a3d45;
+}
+.neon-toggle.active:hover .neon-track {
+  border-color: #00e676;
+  box-shadow: 0 0 14px rgba(0, 230, 118, 0.4), 0 0 35px rgba(0, 230, 118, 0.2), inset 0 0 12px rgba(0, 230, 118, 0.15);
+}
+</style>

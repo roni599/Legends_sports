@@ -5,152 +5,62 @@
         <i class="bi bi-calendar-range me-2"></i>Booking Calendar
       </h5>
       <div>
-        <select v-model="selectedGround" class="form-select form-select-sm d-inline-block w-auto me-2" @change="fetchBookings">
+        <select v-model="selectedGround" class="form-select form-select-sm d-inline-block w-auto me-2" @change="applyFilter">
           <option value="">All Grounds</option>
           <option v-for="ground in grounds" :key="ground.id" :value="ground.id">{{ ground.name }}</option>
         </select>
-        <button class="btn btn-primary btn-sm rounded-pill px-3" @click="openBookingModal()">
+        <router-link to="/bookings/create" class="btn btn-primary btn-sm rounded-pill px-3">
           <i class="bi bi-plus-circle me-1"></i> New Booking
-        </button>
+        </router-link>
       </div>
     </div>
     <div class="card-body">
-      <FullCalendar ref="fullCalendar" :options="calendarOptions" />
-    </div>
-
-
-    <!-- Booking Modal Placeholders (We will implement the modal component next) -->
-    <div v-if="showModal" class="modal-backdrop fade show"></div>
-    <div v-if="showModal" class="modal fade show d-block" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-light">
-            <h5 class="modal-title fw-bold text-primary">Create Booking</h5>
-            <button type="button" class="btn-close" @click="closeModal"></button>
-          </div>
-          <div class="modal-body p-4">
-            <form @submit.prevent="submitBooking">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-secondary">Select Client</label>
-                  <VueMultiselect
-                    v-model="selectedClientObj"
-                    :options="clients"
-                    :custom-label="clientLabel"
-                    track-by="id"
-                    placeholder="-- Search Client --"
-                    :searchable="true"
-                    :allow-empty="false"
-                  >
-                  </VueMultiselect>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-secondary">Select Ground</label>
-                  <select v-model="form.ground_id" class="form-select" @change="calculatePricePreview" required>
-                    <option value="">-- Choose Ground --</option>
-                    <option v-for="ground in activeGrounds" :key="ground.id" :value="ground.id">{{ ground.name }}</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold text-secondary">Date</label>
-                  <input type="date" v-model="form.date" class="form-control" @change="calculatePricePreview" required>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold text-secondary">Start Time</label>
-                  <input type="time" v-model="form.start_time" class="form-control" @change="calculatePricePreview" required>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold text-secondary">End Time</label>
-                  <input type="time" v-model="form.end_time" class="form-control" @change="calculatePricePreview" required>
-                </div>
-                
-                <!-- Live Price Preview Box -->
-                <div class="col-12" v-if="pricePreview">
-                  <div class="alert alert-info border-0 shadow-sm mb-0">
-                    <h6 class="fw-bold mb-2"><i class="bi bi-calculator me-2"></i>Price Calculation</h6>
-                    <div class="d-flex justify-content-between mb-1 text-sm">
-                      <span>Base Price ({{ pricePreview.duration_hours }} hrs):</span>
-                      <span class="fw-bold">৳ {{ pricePreview.base_price }}</span>
-                    </div>
-                    <div v-for="rule in pricePreview.applied_rules" :key="rule.name" class="d-flex justify-content-between mb-1 text-sm text-primary">
-                      <span>+ {{ rule.name }} ({{ rule.type }}):</span>
-                      <span class="fw-bold">৳ {{ rule.modifier }}</span>
-                    </div>
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between text-dark">
-                      <span class="fw-bold">Total Amount:</span>
-                      <span class="fw-bold fs-5">৳ {{ pricePreview.total_price }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Error Box -->
-                <div class="col-12" v-if="priceError">
-                  <div class="alert alert-danger border-0 shadow-sm mb-0 text-sm">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ priceError }}
-                  </div>
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-secondary">Discount (৳)</label>
-                  <input type="number" v-model="form.discount" class="form-control" min="0" :max="pricePreview?.total_price || 0">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-secondary">Paid Amount (৳)</label>
-                  <input type="number" v-model="form.paid_amount" class="form-control" min="0">
-                </div>
-                
-                <div class="col-12 mt-4 text-end">
-                  <button type="button" class="btn btn-light me-2" @click="closeModal">Cancel</button>
-                  <button type="submit" class="btn btn-primary px-4" :disabled="isSubmitting">
-                    <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
-                    <i v-else class="bi bi-check-circle me-1"></i> Confirm Booking
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
+      <div class="d-flex flex-wrap gap-3 mb-3 small">
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#ffc107"></span>Pending</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#0d6efd"></span>Confirmed</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#0dcaf0"></span>Running</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#198754"></span>Completed</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#dc3545"></span>Cancelled</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#6c757d"></span>No Show</span>
       </div>
+      <FullCalendar ref="fullCalendar" :options="calendarOptions" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2';
 import axios from 'axios';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import VueMultiselect from 'vue-multiselect';
-import 'vue-multiselect/dist/vue-multiselect.css';
 
+const router = useRouter();
 const grounds = ref([]);
-const activeGrounds = ref([]);
-const clients = ref([]);
-const selectedClientObj = ref(null);
 const selectedGround = ref('');
-const bookings = ref([]);
-const showModal = ref(false);
-const selectedSlot = ref(null);
 const fullCalendar = ref(null);
-const isSubmitting = ref(false);
-const pricePreview = ref(null);
-const priceError = ref(null);
+const allBookings = ref([]);
 
-const form = ref({
-  client_id: '',
-  ground_id: '',
-  date: '',
-  start_time: '',
-  end_time: '',
-  discount: 0,
-  paid_amount: 0
-});
+function handleDateSelect(selectInfo) {
+  const start = selectInfo.start;
+  if (start < new Date()) {
+    selectInfo.view.calendar.unselect();
+    Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Cannot book past dates or times!', showConfirmButton: false, timer: 3000 });
+    return;
+  }
+  const query = {
+    date: start.toISOString().split('T')[0],
+    start_time: start.toTimeString().substring(0, 5),
+    ground_id: selectedGround.value || ''
+  };
+  selectInfo.view.calendar.unselect();
+  router.push({ path: '/bookings/create', query });
+}
 
-// ... existing calendarOptions ...
-const calendarOptions = ref({
+const calendarOptions = {
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'timeGridWeek',
   headerToolbar: {
@@ -163,23 +73,16 @@ const calendarOptions = ref({
   allDaySlot: false,
   selectable: true,
   selectMirror: true,
+  selectAllow: (selectInfo) => selectInfo.start >= new Date(),
   select: handleDateSelect,
   eventClick: handleEventClick,
   events: [],
   height: 'auto',
+  eventDisplay: 'block',
   eventTimeFormat: {
     hour: 'numeric',
     minute: '2-digit',
     meridiem: 'short'
-  }
-});
-
-const fetchClients = async () => {
-  try {
-    const { data } = await axios.get('/api/clients');
-    clients.value = data.data || data;
-  } catch (error) {
-    console.error('Error fetching clients', error);
   }
 };
 
@@ -187,158 +90,147 @@ const fetchGrounds = async () => {
   try {
     const { data } = await axios.get('/api/grounds?all=true');
     grounds.value = data;
-    activeGrounds.value = data.filter(g => g.status === 'active');
   } catch (error) {
     console.error('Error fetching grounds', error);
   }
 };
 
-const fetchBookings = async () => {
-  try {
-    // We will build a specific calendar API endpoint or format this from index
-    const { data } = await axios.get('/api/bookings?all=true');
-    
-    // Transform into FullCalendar event format
-    const events = [];
-    data.forEach(booking => {
-      booking.slots.forEach(slot => {
-        let color = '#3788d8'; // default primary
-        if (booking.status === 'confirmed') color = '#198754';
-        if (booking.status === 'running') color = '#0dcaf0';
-        if (booking.status === 'completed') color = '#6c757d';
-        
-        events.push({
-          id: booking.id,
-          title: booking.client.name + ' (' + booking.ground.name + ')',
-          start: slot.date + 'T' + slot.start_time,
-          end: slot.date + 'T' + slot.end_time,
-          backgroundColor: color,
-          borderColor: color,
-          extendedProps: { booking }
-        });
+const buildEvents = (bookings) => {
+  const statusColors = {
+    pending: '#ffc107',
+    confirmed: '#0d6efd',
+    running: '#0dcaf0',
+    completed: '#198754',
+    cancelled: '#dc3545',
+    no_show: '#6c757d'
+  };
+  const events = [];
+  bookings.forEach(booking => {
+    booking.slots.forEach(slot => {
+      let color = statusColors[booking.status] || '#6c757d';
+      events.push({
+        id: booking.id,
+        title: booking.client.name + ' (' + booking.ground.name + ')',
+        start: slot.date + 'T' + slot.start_time,
+        end: slot.date + 'T' + slot.end_time,
+        backgroundColor: color,
+        borderColor: color,
+        textColor: '#ffffff',
+        extendedProps: { booking }
       });
     });
-    
-    // Filter by ground if selected
-    calendarOptions.value.events = selectedGround.value 
-      ? events.filter(e => e.extendedProps.booking.ground_id == selectedGround.value)
-      : events;
-      
+  });
+  return events;
+};
+
+const updateCalendarEvents = () => {
+  const events = buildEvents(allBookings.value);
+  const filtered = selectedGround.value
+    ? events.filter(e => e.extendedProps.booking.ground_id == selectedGround.value)
+    : events;
+  const api = fullCalendar.value?.getApi();
+  if (api) {
+    api.removeAllEvents();
+    api.addEventSource(filtered);
+  }
+};
+
+const fetchBookings = async () => {
+  try {
+    const { data } = await axios.get('/api/bookings?all=true');
+    allBookings.value = data;
+    updateCalendarEvents();
   } catch (error) {
     console.error('Error fetching bookings', error);
   }
 };
 
-function handleDateSelect(selectInfo) {
-  selectedSlot.value = selectInfo;
-  
-  // Format dates for the form
-  const start = selectInfo.start;
-  const end = selectInfo.end;
-  
-  form.value = {
-    client_id: '',
-    ground_id: selectedGround.value || '',
-    date: start.toISOString().split('T')[0],
-    start_time: start.toTimeString().substring(0,5),
-    end_time: end.toTimeString().substring(0,5),
-    discount: 0,
-    paid_amount: 0
-  };
-  
-  pricePreview.value = null;
-  if (form.value.ground_id) calculatePricePreview();
-  
-  showModal.value = true;
-  selectInfo.view.calendar.unselect();
-}
-
-const clientLabel = (client) => {
-  return `${client.name} (${client.phone})`;
-};
-
-watch(selectedClientObj, (newVal) => {
-  form.value.client_id = newVal ? newVal.id : '';
-});
-
-const calculatePricePreview = async () => {
-  priceError.value = null;
-  if (!form.value.ground_id || !form.value.date || !form.value.start_time || !form.value.end_time) {
-    pricePreview.value = null;
-    return;
-  }
-  
-  try {
-    const { data } = await axios.post('/api/bookings/calculate-price', {
-      ground_id: form.value.ground_id,
-      date: form.value.date,
-      start_time: form.value.start_time,
-      end_time: form.value.end_time
-    });
-    pricePreview.value = data;
-  } catch (error) {
-    console.error('Price calculation failed', error);
-    pricePreview.value = null;
-    priceError.value = error.response?.data?.errors?.time_slot?.[0] || 'Invalid time slot selected.';
-  }
-};
-
-const submitBooking = async () => {
-  isSubmitting.value = true;
-  try {
-    await axios.post('/api/bookings', form.value);
-    alert('Booking created successfully!');
-    closeModal();
-    fetchBookings(); // Refresh calendar
-  } catch (error) {
-    const msg = error.response?.data?.errors?.time_slot?.[0] || 
-                error.response?.data?.message || 
-                'Failed to create booking';
-    alert('Error: ' + msg);
-  } finally {
-    isSubmitting.value = false;
-  }
-};
-
 function handleEventClick(clickInfo) {
-  alert('Event clicked: ' + clickInfo.event.title + '\nStatus: ' + clickInfo.event.extendedProps.booking.status);
-}
-
-function openBookingModal() {
-  form.value = {
-    client_id: '',
-    ground_id: selectedGround.value || '',
-    date: new Date().toISOString().split('T')[0],
-    start_time: '10:00',
-    end_time: '11:00',
-    discount: 0,
-    paid_amount: 0
+  const booking = clickInfo.event.extendedProps.booking;
+  const statusColor = {
+    pending: 'warning', confirmed: 'success', running: 'info',
+    completed: 'secondary', cancelled: 'danger', no_show: 'secondary'
   };
-  pricePreview.value = null;
-  selectedSlot.value = null;
-  showModal.value = true;
+  const canComplete = ['pending', 'confirmed', 'running'].includes(booking.status);
+
+  let html = `
+    <div class="text-start">
+      <p><strong>Client:</strong> ${booking.client?.name}</p>
+      <p><strong>Ground:</strong> ${booking.ground?.name}</p>
+      <p><strong>Status:</strong> <span class="badge bg-${statusColor[booking.status] || 'secondary'}">${booking.status.toUpperCase()}</span></p>
+      <p><strong>Total:</strong> ৳${booking.total_amount} | <strong>Paid:</strong> ৳${booking.paid_amount} | <strong>Due:</strong> ৳${booking.due_amount}</p>
+    </div>`;
+
+  Swal.fire({
+    title: `Booking #${booking.id}`,
+    html: html,
+    icon: 'info',
+    showCancelButton: canComplete,
+    showDenyButton: true,
+    confirmButtonColor: '#198754',
+    denyButtonColor: '#0d6efd',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: canComplete ? '<i class="bi bi-check-circle me-1"></i> Complete' : 'OK',
+    denyButtonText: '<i class="bi bi-printer me-1"></i> Print',
+    customClass: { popup: 'swal-dark' }
+  }).then(async (result) => {
+    if (result.isConfirmed && canComplete) {
+      try {
+        await axios.put(`/api/bookings/${booking.id}`, { status: 'completed' });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Booking completed!', showConfirmButton: false, timer: 3000 });
+        fetchBookings();
+      } catch (error) {
+        Swal.fire('Error', error.response?.data?.message || 'Failed to complete', 'error');
+      }
+    } else if (result.isDenied) {
+      window.open(`/print-invoice/${booking.id}`, '_blank', 'width=800,height=600');
+    }
+  });
 }
 
-function closeModal() {
-  showModal.value = false;
-  selectedSlot.value = null;
-}
+const applyFilter = () => {
+  updateCalendarEvents();
+};
 
 onMounted(() => {
-  fetchClients();
   fetchGrounds();
   fetchBookings();
 });
 </script>
 
 <style scoped>
-/* Add any custom styles for fullcalendar overrides */
 :deep(.fc-theme-standard .fc-scrollgrid) {
   border-color: #dee2e6;
 }
 :deep(.fc-v-event) {
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+:deep(.fc-event) {
+  border: none !important;
+}
+:deep(.fc-event-main) {
+  color: #fff !important;
+  padding: 2px 4px;
+}
+:deep(.fc-daygrid-event) {
+  border: none !important;
+}
+:deep(.fc-daygrid-day.fc-day-disabled) {
+  cursor: not-allowed !important;
+}
+:deep(.fc-daygrid-day.fc-day-disabled .fc-daygrid-day-frame) {
+  opacity: 0.5;
+}
+:deep(.fc-timegrid-slot.fc-slot-disabled) {
+  cursor: not-allowed !important;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    rgba(0,0,0,0.03) 5px,
+    rgba(0,0,0,0.03) 10px
+  );
 }
 :deep(.fc-toolbar-title) {
   font-size: 1.25rem !important;

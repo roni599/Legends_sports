@@ -48,8 +48,8 @@
       </div>
       
       <!-- Pagination -->
-      <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
-        <div class="text-secondary small mb-2 mb-md-0">
+      <div class="d-flex justify-content-between align-items-center p-3 mt-2">
+        <div class="text-light small mb-2 mb-md-0">
           Showing {{ purchaseStore.purchases.length === 0 ? 0 : ((purchaseStore.page - 1) * purchaseStore.perPage) + 1 }} to {{ Math.min(purchaseStore.page * purchaseStore.perPage, purchaseStore.total) }} of {{ purchaseStore.total }} entries
         </div>
         <div class="btn-group">

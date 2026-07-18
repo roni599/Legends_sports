@@ -1,29 +1,25 @@
 <?php
 
-namespace App\Models;
+namespace App\Console\Commands;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Console\Command;
+use App\Models\Booking;
 use Carbon\Carbon;
 
-class Booking extends Model
+class CompleteExpiredBookings extends Command
 {
-    use \App\Traits\LocksClosedMonths;
+    protected $signature = 'bookings:complete-expired';
+    protected $description = 'Automatically mark bookings as completed when their slot end time has passed';
 
-    protected $guarded = ['id'];
-
-    protected function getClosingDateField()
-    {
-        return 'created_at';
-    }
-
-    public static function completeExpired()
+    public function handle()
     {
         $now = Carbon::now();
 
         $bookings = Booking::whereIn('status', ['pending', 'confirmed', 'running'])
             ->with('slots')
             ->get();
+
+        $count = 0;
 
         foreach ($bookings as $booking) {
             $hasStarted = false;
@@ -40,25 +36,17 @@ class Booking extends Model
 
             if ($allExpired && in_array($booking->status, ['pending', 'confirmed', 'running'])) {
                 $booking->update(['status' => 'completed']);
+                $count++;
             } elseif ($hasStarted && in_array($booking->status, ['pending', 'confirmed'])) {
                 $booking->update(['status' => 'running']);
+                $count++;
             }
         }
-    }
 
-    public function client() {
-        return $this->belongsTo(Client::class);
-    }
+        if ($count > 0) {
+            $this->info("Auto-completed {$count} booking(s).");
+        }
 
-    public function ground() {
-        return $this->belongsTo(Ground::class);
-    }
-
-    public function slots() {
-        return $this->hasMany(BookingSlot::class);
-    }
-
-    public function invoice() {
-        return $this->hasOne(Invoice::class);
+        return Command::SUCCESS;
     }
 }

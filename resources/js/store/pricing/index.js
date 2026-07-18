@@ -62,6 +62,19 @@ export const usePricingStore = defineStore('pricing', {
       }
     },
 
+    async toggleStatus(id) {
+      try {
+        const response = await axios.patch(`/api/pricing-rules/${id}/toggle-status`);
+        const updated = response.data;
+        const rule = this.rules.find(r => r.id === id);
+        if (rule) rule.status = updated.status;
+        return true;
+      } catch (error) {
+        console.error("Error toggling status", error);
+        return false;
+      }
+    },
+
     async deleteRule(id) {
       if (!confirm('Are you sure you want to delete this pricing rule?')) return false;
       
