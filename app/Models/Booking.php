@@ -38,7 +38,7 @@ class Booking extends Model
                 if ($slotEnd->isFuture()) $allExpired = false;
             }
 
-            if ($allExpired && in_array($booking->status, ['pending', 'confirmed', 'running'])) {
+            if ($allExpired && $booking->status === 'running') {
                 $booking->update(['status' => 'completed']);
             } elseif ($hasStarted && in_array($booking->status, ['pending', 'confirmed'])) {
                 $booking->update(['status' => 'running']);

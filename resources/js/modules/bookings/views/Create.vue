@@ -278,8 +278,11 @@ const groundForm = ref({
 
 const getBDTime = () => {
   const now = new Date();
-  const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
-  return { h: bd.getHours(), m: bd.getMinutes(), date: bd.toISOString().split('T')[0] };
+  const parts = now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const match = parts.match(/(\d+)\/(\d+)\/(\d+),?\s*(\d+):(\d+)/);
+  if (!match) return { h: 0, m: 0, date: new Date().toISOString().split('T')[0] };
+  const [_, month, day, year, h, m] = match;
+  return { h: parseInt(h), m: parseInt(m), date: `${year}-${month}-${day}` };
 };
 
 const todayStr = getBDTime().date;

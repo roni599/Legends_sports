@@ -304,7 +304,7 @@ class BookingController extends Controller
         
         $dueAmount = $netAmount - $paidAmount;
         
-        $status = ($paidAmount > 0 || $netAmount == 0) ? 'confirmed' : 'pending';
+        $status = 'pending';
 
         // 4. Save to DB with Transaction and Pessimistic Locking
         $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground, $appliedRules) {

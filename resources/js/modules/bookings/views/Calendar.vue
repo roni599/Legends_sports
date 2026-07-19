@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -51,9 +51,10 @@ function handleDateSelect(selectInfo) {
     Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Cannot book past dates or times!', showConfirmButton: false, timer: 3000 });
     return;
   }
+  const bdStr = start.toLocaleString('sv-SE', { timeZone: 'Asia/Dhaka' });
   const query = {
-    date: start.toISOString().split('T')[0],
-    start_time: start.toTimeString().substring(0, 5),
+    date: bdStr.split(' ')[0],
+    start_time: bdStr.split(' ')[1].substring(0, 5),
     ground_id: selectedGround.value || ''
   };
   selectInfo.view.calendar.unselect();
@@ -68,12 +69,23 @@ const calendarOptions = {
     center: 'title',
     right: 'dayGridMonth,timeGridWeek,timeGridDay'
   },
-  slotMinTime: '06:00:00',
+  slotDuration: '01:00:00',
+  slotLabelInterval: '01:00:00',
+  snapDuration: '01:00:00',
+  slotMinTime: '00:00:00',
   slotMaxTime: '24:00:00',
   allDaySlot: false,
   selectable: true,
   selectMirror: true,
-  selectAllow: (selectInfo) => selectInfo.start >= new Date(),
+  selectAllow: () => true,
+  dayCellClassNames: (arg) => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return arg.date < today ? 'fc-day-disabled' : '';
+  },
+  slotLaneClassNames: (arg) => {
+    return arg.isPast ? 'fc-slot-disabled' : '';
+  },
   select: handleDateSelect,
   eventClick: handleEventClick,
   events: [],
@@ -83,6 +95,18 @@ const calendarOptions = {
     hour: 'numeric',
     minute: '2-digit',
     meridiem: 'short'
+  },
+  eventContent: (arg) => {
+    const parts = arg.timeText ? [arg.event.title.split(' | ')] : [arg.event.title.split(' | ')];
+    const t = arg.event.title.split(' | ');
+    return {
+      html: `<div style="font-size:0.75rem;line-height:1.4;padding:2px 4px;white-space:normal;">
+        <div style="font-weight:700;">${t[0] || ''}</div>
+        <div style="font-size:0.7rem;opacity:0.9;">${t[1] || ''}</div>
+        <div style="font-size:0.7rem;">${t[2] || ''}</div>
+        <div style="font-size:0.65rem;font-weight:600;text-transform:uppercase;">${t[3] || ''}</div>
+      </div>`
+    };
   }
 };
 
@@ -108,9 +132,11 @@ const buildEvents = (bookings) => {
   bookings.forEach(booking => {
     booking.slots.forEach(slot => {
       let color = statusColors[booking.status] || '#6c757d';
+      const startTime = slot.start_time.substring(0, 5);
+      const endTime = slot.end_time.substring(0, 5);
       events.push({
-        id: booking.id,
-        title: booking.client.name + ' (' + booking.ground.name + ')',
+        id: `booking-${booking.id}-slot-${slot.id}`,
+        title: booking.client.name + ' | ' + startTime + ' - ' + endTime + ' | ' + booking.ground.name + ' | ' + booking.status.toUpperCase(),
         start: slot.date + 'T' + slot.start_time,
         end: slot.date + 'T' + slot.end_time,
         backgroundColor: color,
@@ -215,6 +241,9 @@ onMounted(() => {
 }
 :deep(.fc-daygrid-event) {
   border: none !important;
+  padding: 3px 6px;
+  font-size: 0.8rem;
+  border-radius: 6px;
 }
 :deep(.fc-daygrid-day.fc-day-disabled) {
   cursor: not-allowed !important;
@@ -222,15 +251,35 @@ onMounted(() => {
 :deep(.fc-daygrid-day.fc-day-disabled .fc-daygrid-day-frame) {
   opacity: 0.5;
 }
-:deep(.fc-timegrid-slot.fc-slot-disabled) {
+:deep(.fc-slot-disabled) {
   cursor: not-allowed !important;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 5px,
-    rgba(0,0,0,0.03) 5px,
-    rgba(0,0,0,0.03) 10px
-  );
+}
+:deep(.fc-timegrid-slot-lane) {
+  padding: 8px 4px;
+}
+:deep(.fc-timegrid-slot) {
+  height: 60px;
+}
+:deep(.fc-timegrid-col) {
+  padding: 4px 2px;
+}
+:deep(.fc-v-event) {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+:deep(.fc-event-title) {
+  white-space: normal;
+  overflow: hidden;
+}
+:deep(.fc-daygrid-event) {
+  padding: 3px 6px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+:deep(.fc-daygrid-event-harness) {
+  margin-bottom: 2px;
 }
 :deep(.fc-toolbar-title) {
   font-size: 1.25rem !important;
