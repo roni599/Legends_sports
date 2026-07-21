@@ -133,13 +133,6 @@
                   </tr>
                 </template>
               </tbody>
-              <tfoot v-if="ledgerStore.bookings.length > 0">
-                <tr class="border-top border-secondary">
-                  <td colspan="8" class="text-end fw-bold text-light">Totals (from Bookings)</td>
-                  <td class="text-end fw-bold text-white fs-6">৳ {{ ledgerStore.summary.total_booked_amount }}</td>
-                  <td class="text-end fw-bold" :class="ledgerStore.summary.total_due > 0 ? 'text-danger' : 'text-success'">৳ {{ ledgerStore.summary.total_due }}</td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         </div>

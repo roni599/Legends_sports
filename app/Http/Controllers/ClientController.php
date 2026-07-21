@@ -130,8 +130,8 @@ class ClientController extends Controller
         $totalBookedAmount = 0;
         $totalPlayAmount = 0;
         $totalPaid = 0;
-        $totalDue = 0;
-        $totalAdvance = 0;
+        $totalDue = $client->total_due > 0 ? $client->total_due : 0;
+        $totalAdvance = $client->total_due < 0 ? abs($client->total_due) : 0;
         $totalBooked = 0;
         $totalPlays = 0;
         $totalBookings = $bookings->count();
@@ -147,9 +147,6 @@ class ClientController extends Controller
                 }
             }
             $totalPaid += floatval($bkg->paid_amount);
-            $due = floatval($bkg->total_due);
-            if ($due > 0) $totalDue += $due;
-            elseif ($due < 0) $totalAdvance += abs($due);
         }
 
         return response()->json([
@@ -211,11 +208,35 @@ class ClientController extends Controller
     {
         $invoices = \App\Models\Invoice::where('client_id', $client->id)
             ->where('due', '>', 0)
-            ->get();
+            ->get()->map(function ($inv) {
+                return [
+                    'id' => 'INV-' . $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'grand_total' => $inv->grand_total,
+                    'due' => $inv->due,
+                    'type' => 'invoice',
+                    'date' => $inv->created_at ? $inv->created_at->format('jS F') : null,
+                    'original_id' => $inv->id
+                ];
+            });
             
+        $bookings = \App\Models\Booking::where('client_id', $client->id)
+            ->where('due_amount', '>', 0)
+            ->get()->map(function ($bkg) {
+                return [
+                    'id' => 'BKG-' . $bkg->id,
+                    'invoice_number' => 'BKG-' . $bkg->id,
+                    'grand_total' => $bkg->net_amount,
+                    'due' => $bkg->due_amount,
+                    'type' => 'booking',
+                    'date' => $bkg->created_at ? $bkg->created_at->format('jS F') : null,
+                    'original_id' => $bkg->id
+                ];
+            });
+
         return response()->json([
             'client' => $client,
-            'invoices' => $invoices
+            'invoices' => collect($invoices)->merge($bookings)->values()
         ]);
     }
 
@@ -226,7 +247,9 @@ class ClientController extends Controller
             'note' => 'nullable|string',
             'date' => 'required|date',
             'invoices' => 'nullable|array',
-            'invoices.*.id' => 'required_with:invoices|exists:invoices,id',
+            'invoices.*.id' => 'required_with:invoices',
+            'invoices.*.type' => 'nullable|string',
+            'invoices.*.original_id' => 'nullable|integer',
             'invoices.*.amount' => 'required_with:invoices|numeric|min:0.01',
             'amount' => 'required|numeric|min:0.01'
         ]);
@@ -241,15 +264,27 @@ class ClientController extends Controller
 
             if (!empty($validated['invoices'])) {
                 foreach ($validated['invoices'] as $invoiceData) {
-                    $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceData['id']);
-                    if ($invoice->client_id !== $lockedClient->id) continue;
-                    
-                    $payAmount = min($invoiceData['amount'], $invoice->due);
-                    if ($payAmount <= 0) continue;
+                    if (isset($invoiceData['type']) && $invoiceData['type'] === 'booking') {
+                        $booking = \App\Models\Booking::lockForUpdate()->find($invoiceData['original_id']);
+                        if (!$booking || $booking->client_id !== $lockedClient->id) continue;
+                        
+                        $payAmount = min($invoiceData['amount'], $booking->due_amount);
+                        if ($payAmount <= 0) continue;
 
-                    $invoice->paid += $payAmount;
-                    $invoice->due -= $payAmount;
-                    $invoice->save();
+                        $booking->paid_amount += $payAmount;
+                        $booking->due_amount -= $payAmount;
+                        $booking->save();
+                    } else {
+                        $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceData['original_id'] ?? $invoiceData['id']);
+                        if (!$invoice || $invoice->client_id !== $lockedClient->id) continue;
+                        
+                        $payAmount = min($invoiceData['amount'], $invoice->due);
+                        if ($payAmount <= 0) continue;
+
+                        $invoice->paid += $payAmount;
+                        $invoice->due -= $payAmount;
+                        $invoice->save();
+                    }
 
                     $totalPaid += $payAmount;
                 }

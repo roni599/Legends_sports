@@ -143,7 +143,7 @@ class BookingController extends Controller
 
         $rule = \App\Models\PricingRule::findOrFail($validated['pricing_rule_id']);
         $basePrice = $rule->price_modifier;
-        $totalPrice = $basePrice;
+        $totalPrice = $basePrice * $durationHours;
         $appliedRules[] = [
             'name' => $rule->name,
             'modifier' => $rule->price_modifier
@@ -212,7 +212,7 @@ class BookingController extends Controller
         $appliedRules = [];
 
         $rule = \App\Models\PricingRule::findOrFail($validated['pricing_rule_id']);
-        $totalAmount = $rule->price_modifier;
+        $totalAmount = $rule->price_modifier * $durationHours;
         $appliedRules[] = [
             'name' => $rule->name,
             'type' => $rule->type,

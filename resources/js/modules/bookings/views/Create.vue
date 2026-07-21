@@ -98,12 +98,16 @@
               <div class="alert alert-info border-0 shadow-sm mb-0">
                 <h6 class="fw-bold mb-2"><i class="bi bi-calculator me-2"></i>Price Calculation</h6>
                 <div class="d-flex justify-content-between mb-1 text-sm">
-                  <span>Base Price ({{ bookingStore.pricePreview.duration_hours }} hrs):</span>
-                  <span class="fw-bold">৳ {{ bookingStore.pricePreview.base_price }}</span>
+                  <span>Duration:</span>
+                  <span class="fw-bold">{{ bookingStore.pricePreview.duration_hours }} hrs</span>
                 </div>
-                <div v-for="rule in bookingStore.pricePreview.applied_rules" :key="rule.name" class="d-flex justify-content-between mb-1 text-sm text-primary">
-                  <span>+ {{ rule.name }} ({{ rule.type }}):</span>
-                  <span class="fw-bold">৳ {{ rule.modifier }}</span>
+                <div v-if="bookingStore.pricePreview.applied_rules && bookingStore.pricePreview.applied_rules.length > 0" class="d-flex justify-content-between mb-1 text-sm text-primary">
+                  <span>Slot Rate ({{ bookingStore.pricePreview.applied_rules[0].name }}):</span>
+                  <span class="fw-bold">৳ {{ bookingStore.pricePreview.applied_rules[0].modifier }}</span>
+                </div>
+                <div v-else class="d-flex justify-content-between mb-1 text-sm text-primary">
+                  <span>Slot Rate:</span>
+                  <span class="fw-bold">৳ {{ bookingStore.pricePreview.base_price }}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-1 text-sm">
                   <span>Gross Total:</span>
@@ -114,9 +118,17 @@
                   <span class="fw-bold">- ৳ {{ form.discount }}</span>
                 </div>
                 <hr class="my-2">
-                <div class="d-flex justify-content-between text-dark">
+                <div class="d-flex justify-content-between text-dark mb-1">
                   <span class="fw-bold">Net Amount:</span>
                   <span class="fw-bold fs-5">৳ {{ Math.max(0, bookingStore.pricePreview.total_price - (form.discount || 0)) }}</span>
+                </div>
+                <div v-if="parseFloat(form.paid_amount || 0) > 0" class="d-flex justify-content-between mb-1 text-sm text-success">
+                  <span>Paid Amount:</span>
+                  <span class="fw-bold">- ৳ {{ form.paid_amount }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-dark mt-2 border-top pt-1">
+                  <span class="fw-bold">Due Amount:</span>
+                  <span class="fw-bold fs-6 text-danger">৳ {{ Math.max(0, bookingStore.pricePreview.total_price - (form.discount || 0) - (form.paid_amount || 0)) }}</span>
                 </div>
               </div>
             </div>
@@ -129,11 +141,11 @@
 
             <div class="col-md-6">
               <label class="form-label fw-bold text-secondary">Discount (৳)</label>
-              <input type="number" v-model="form.discount" class="form-control dark-input" min="0" :max="bookingStore.pricePreview?.total_price || 0">
+              <input type="text" v-model="form.discount" @input="handleAmountInput('discount')" class="form-control dark-input">
             </div>
             <div class="col-md-6">
               <label class="form-label fw-bold text-secondary">Paid Amount (৳)</label>
-              <input type="number" v-model="form.paid_amount" class="form-control dark-input" min="0">
+              <input type="text" v-model="form.paid_amount" @input="handleAmountInput('paid_amount')" class="form-control dark-input">
             </div>
 
             <div class="col-12 mt-4 text-end">
@@ -177,7 +189,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label text-light">Opening Due Amount (৳)</label>
-                  <input type="number" v-model="clientForm.total_due" class="form-control dark-input">
+                  <input type="text" v-model="clientForm.total_due" @input="handleClientAmountInput('total_due')" class="form-control dark-input">
                   <small class="text-danger" v-if="clientStore.errors.total_due">{{ clientStore.errors.total_due[0] }}</small>
                 </div>
                 <div class="col-12">
@@ -226,7 +238,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label text-light">Base Price Per Hour (৳) *</label>
-                  <input type="number" step="0.01" v-model="groundForm.base_price_per_hour" class="form-control dark-input" required>
+                  <input type="text" v-model="groundForm.base_price_per_hour" @input="handleGroundAmountInput('base_price_per_hour')" class="form-control dark-input" required>
                   <small class="text-danger" v-if="groundStore.errors.base_price_per_hour">{{ groundStore.errors.base_price_per_hour[0] }}</small>
                 </div>
                 <div class="col-md-6">
@@ -345,6 +357,38 @@ const minTime = computed(() => {
   else if (minM > 30) { minM = 0; minH += 1; }
   return `${String(minH).padStart(2, '0')}:${String(minM).padStart(2, '0')}`;
 });
+
+const handleAmountInput = (field) => {
+  let val = form.value[field].toString().replace(/[^0-9.]/g, '');
+  if (val.split('.').length > 2) val = val.replace(/\.+$/, '');
+  
+  if (field === 'discount' && bookingStore.pricePreview?.total_price) {
+    if (parseFloat(val || 0) > bookingStore.pricePreview.total_price) {
+      val = bookingStore.pricePreview.total_price.toString();
+    }
+  }
+  
+  if (field === 'paid_amount' && bookingStore.pricePreview?.total_price) {
+    const netAmount = Math.max(0, bookingStore.pricePreview.total_price - parseFloat(form.value.discount || 0));
+    if (parseFloat(val || 0) > netAmount) {
+      val = netAmount.toString();
+    }
+  }
+  
+  form.value[field] = val;
+};
+
+const handleClientAmountInput = (field) => {
+  let val = clientForm.value[field].toString().replace(/[^0-9.-]/g, '');
+  if (val.split('.').length > 2) val = val.replace(/\.+$/, '');
+  clientForm.value[field] = val;
+};
+
+const handleGroundAmountInput = (field) => {
+  let val = groundForm.value[field].toString().replace(/[^0-9.]/g, '');
+  if (val.split('.').length > 2) val = val.replace(/\.+$/, '');
+  groundForm.value[field] = val;
+};
 
 const clientLabel = (client) => {
   return `${client.name} (${client.phone})`;

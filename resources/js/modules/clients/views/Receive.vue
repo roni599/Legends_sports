@@ -30,6 +30,8 @@
                 <input type="checkbox" class="form-check-input" v-model="selectAll" @change="toggleAll">
               </th>
               <th class="ps-0">Invoice</th>
+              <th>Invoice Type</th>
+              <th>Date</th>
               <th>Invoice Amount (৳)</th>
               <th>Due Amount (৳)</th>
               <th style="width: 250px;">Paying Amount (৳)</th>
@@ -37,24 +39,25 @@
           </thead>
           <tbody>
             <tr v-if="loadingInvoices">
-              <td colspan="5" class="text-center py-4">Loading invoices...</td>
+              <td colspan="7" class="text-center py-4">Loading invoices...</td>
             </tr>
             <tr v-else-if="invoices.length === 0">
-              <td colspan="5" class="text-center py-4">No due invoices found for this client.</td>
+              <td colspan="7" class="text-center py-4">No due invoices found for this client.</td>
             </tr>
             <tr v-else v-for="invoice in invoices" :key="invoice.id">
               <td class="pe-2 text-center">
-                <input type="checkbox" class="form-check-input" v-model="invoice.selected" @change="updateTotals">
+                <input type="checkbox" class="form-check-input" v-model="invoice.selected" @change="toggleRow(invoice)">
               </td>
               <td class="ps-0">{{ invoice.invoice_number }}</td>
+              <td class="text-capitalize">{{ invoice.type }}</td>
+              <td>{{ invoice.date }}</td>
               <td>{{ invoice.grand_total }}</td>
               <td class="text-danger fw-bold">{{ invoice.due }}</td>
               <td>
                 <input type="text" 
                        class="form-control form-control-sm modal-input fw-bold text-success" 
                        v-model.number="invoice.paying_amount" 
-                       :disabled="!invoice.selected"
-                       @input="updateTotals">
+                       @input="handleRowAmountInput(invoice)">
               </td>
             </tr>
           </tbody>
@@ -66,7 +69,7 @@
         <div class="col-md-6">
           <div class="mb-3">
             <label class="form-label text-light">Note</label>
-            <textarea v-model="paymentForm.note" class="form-control modal-input" rows="7" placeholder="Enter payment note (optional)"></textarea>
+            <textarea v-model="paymentForm.note" class="form-control modal-input custom-note-input" rows="7" placeholder="Enter payment note (optional)"></textarea>
           </div>
         </div>
         <div class="col-md-6">
@@ -76,7 +79,7 @@
             <div class="col-sm-9">
               <div class="input-group">
                 <span class="input-group-text bg-dark text-light border-secondary">৳</span>
-                <input type="text" class="form-control modal-input text-danger fw-bold fs-5" :value="totalPayable.toFixed(2)" readonly>
+                <input type="text" class="form-control modal-input text-danger fw-bold fs-5" :value="grandTotalDue.toFixed(2)" readonly>
               </div>
             </div>
           </div>
@@ -86,7 +89,7 @@
             <div class="col-sm-9">
               <div class="input-group">
                 <span class="input-group-text bg-dark text-light border-secondary">৳</span>
-                <input type="text" class="form-control modal-input fw-bold text-success fs-5" v-model="paymentForm.amount" @input="handleAmountInput">
+                <input type="text" class="form-control modal-input fw-bold text-success fs-5" v-model="paymentForm.amount" @input="handleGlobalAmountInput">
               </div>
             </div>
           </div>
@@ -160,7 +163,7 @@ const paymentForm = ref({
 const totalPayable = computed(() => {
   return invoices.value
     .filter(inv => inv.selected)
-    .reduce((sum, inv) => sum + Number(inv.due), 0);
+    .reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
 });
 
 const grandTotalDue = computed(() => {
@@ -177,7 +180,7 @@ const fetchClientAndInvoices = async () => {
     invoices.value = invRes.data.invoices.map(inv => ({
       ...inv,
       selected: false,
-      paying_amount: inv.due
+      paying_amount: 0
     }));
     loadingInvoices.value = false;
   } catch (error) {
@@ -192,39 +195,67 @@ onMounted(() => {
 });
 
 const toggleAll = () => {
-  invoices.value.forEach(inv => {
-    inv.selected = selectAll.value;
-  });
-  updateTotals();
+  if (selectAll.value) {
+    invoices.value.forEach(inv => {
+      inv.selected = true;
+      inv.paying_amount = Number(inv.due);
+    });
+  } else {
+    invoices.value.forEach(inv => {
+      inv.selected = false;
+      inv.paying_amount = 0;
+    });
+  }
+  paymentForm.value.amount = invoices.value.reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
+};
+
+const toggleRow = (invoice) => {
+  if (invoice.selected) {
+    invoice.paying_amount = Number(invoice.due);
+  } else {
+    invoice.paying_amount = 0;
+  }
+  paymentForm.value.amount = invoices.value.reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
 };
 
 watch(() => invoices.value.map(i => i.selected), () => {
   const allSelected = invoices.value.length > 0 && invoices.value.every(inv => inv.selected);
-  const someSelected = invoices.value.some(inv => inv.selected);
   selectAll.value = allSelected;
-  
-  if (!allSelected && selectAll.value) {
-    selectAll.value = false;
-  }
 });
 
-const handleAmountInput = () => {
-  let val = Number(paymentForm.value.amount);
-  if (val > grandTotalDue.value) {
-    paymentForm.value.amount = grandTotalDue.value;
-    selectAll.value = true;
-    toggleAll(); // this will select all and updateTotals to grandTotalDue
+const handleGlobalAmountInput = () => {
+  let remainingAmount = Number(paymentForm.value.amount) || 0;
+  if (remainingAmount > grandTotalDue.value) {
+    remainingAmount = grandTotalDue.value;
+    paymentForm.value.amount = remainingAmount;
     Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `Maximum payable amount is ${grandTotalDue.value}`, showConfirmButton: false, timer: 3000 });
   }
+
+  invoices.value.forEach(inv => {
+    if (remainingAmount >= Number(inv.due)) {
+      inv.paying_amount = Number(inv.due);
+      inv.selected = true;
+      remainingAmount -= Number(inv.due);
+    } else if (remainingAmount > 0) {
+      inv.paying_amount = remainingAmount;
+      inv.selected = true;
+      remainingAmount = 0;
+    } else {
+      inv.paying_amount = 0;
+      inv.selected = false;
+    }
+  });
 };
 
-const updateTotals = () => {
-  const amount = invoices.value
-    .filter(inv => inv.selected)
-    .reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
-  if (amount > 0) {
-    paymentForm.value.amount = amount;
+const handleRowAmountInput = (invoice) => {
+  let val = Number(invoice.paying_amount) || 0;
+  if (val > Number(invoice.due)) {
+    val = Number(invoice.due);
+    invoice.paying_amount = val;
   }
+  invoice.selected = val > 0;
+  
+  paymentForm.value.amount = invoices.value.reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
 };
 
 const submitPayment = async () => {
@@ -232,6 +263,8 @@ const submitPayment = async () => {
     .filter(inv => inv.selected && Number(inv.paying_amount) > 0)
     .map(inv => ({
       id: inv.id,
+      type: inv.type,
+      original_id: inv.original_id,
       amount: Number(inv.paying_amount)
     }));
 
@@ -282,5 +315,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 select.modal-input {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+.custom-note-input::placeholder {
+  color: #ffffff !important;
+  opacity: 1;
+}
+.custom-note-input {
+  color: #ffffff !important;
 }
 </style>
