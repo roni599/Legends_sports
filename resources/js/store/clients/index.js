@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 export const useClientStore = defineStore('client', {
   state: () => ({
@@ -85,7 +86,20 @@ export const useClientStore = defineStore('client', {
     },
 
     async deleteClient(id) {
-      if (!confirm('Are you sure you want to delete this client?')) return false;
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you really want to delete this client?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        customClass: { popup: 'swal-dark' },
+        background: '#1a1d20',
+        color: '#fff'
+      });
+
+      if (!result.isConfirmed) return false;
       
       this.loading = true;
       try {
@@ -94,10 +108,12 @@ export const useClientStore = defineStore('client', {
             this.page--;
         }
         await this.fetchClients(this.page, this.searchQuery); // Refresh list with current search
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Client deleted successfully!', showConfirmButton: false, timer: 3000 });
         return true;
       } catch (error) {
         console.error("Error deleting client", error);
         this.loading = false;
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: error.response?.data?.message || 'Failed to delete client', showConfirmButton: false, timer: 4000 });
         return false;
       }
     }

@@ -54,7 +54,7 @@
               <td class="text-end text-white">{{ client.total_billed || 0 }}</td>
               <td class="text-end text-white">{{ client.total_paid || 0 }}</td>
               <td class="text-end" :class="{'text-danger fw-bold': client.due_amount > 0}">{{ client.due_amount || 0 }}</td>
-              <td class="text-end" :class="{'text-success fw-bold': client.advance_amount > 0}">{{ client.advance_amount || 0 }}</td>
+              <td class="text-end" :class="{'text-success fw-bold': client.advance_amount > 0}">{{ client.advance_amount > 0 ? '-' + client.advance_amount : 0 }}</td>
               <td class="text-end">
                 <span v-if="client.status === 'deactive'" class="badge bg-danger me-1">Deactive</span>
                 <div class="dropdown" @click.stop>
@@ -84,13 +84,17 @@
   <Teleport to="body">
     <div v-if="openDropdown" class="dropdown-backdrop" @click="openDropdown = null"></div>
     <ul v-if="openDropdown" class="custom-dropdown-menu" :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px' }">
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/edit`" @click="openDropdown = null"><i class="bi bi-pencil-square me-2"></i>Edit</router-link></li>
+      <li><hr class="dropdown-divider"></li>
       <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/ledger`" @click="openDropdown = null"><i class="bi bi-journal-text me-2"></i>Ledger</router-link></li>
-      <li v-if="dropdownClient.due_amount > 0"><a class="dropdown-item" href="#" @click.prevent="openPayModal"><i class="bi bi-cash me-2"></i>Receive Payment</a></li>
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/pay`" @click="openDropdown = null"><i class="bi bi-wallet2 me-2"></i>Pay</router-link></li>
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/receive`" @click="openDropdown = null"><i class="bi bi-box-arrow-in-down me-2"></i>Receive</router-link></li>
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/dismiss`" @click="openDropdown = null"><i class="bi bi-x-circle me-2"></i>Dismiss</router-link></li>
+      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/advance`" @click="openDropdown = null"><i class="bi bi-forward me-2"></i>Advance</router-link></li>
       <li><a class="dropdown-item" href="#" @click.prevent="handleToggleStatus">
         <i :class="dropdownClient.status === 'active' ? 'bi bi-person-dash me-2' : 'bi bi-person-check me-2'"></i>{{ dropdownClient.status === 'active' ? 'Deactive' : 'Active' }}
       </a></li>
       <li><hr class="dropdown-divider"></li>
-      <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/edit`" @click="openDropdown = null"><i class="bi bi-pencil-square me-2"></i>Edit</router-link></li>
       <li><a class="dropdown-item text-danger" href="#" @click.prevent="clientStore.deleteClient(dropdownClient.id); openDropdown = null"><i class="bi bi-trash me-2"></i>Delete</a></li>
     </ul>
   </Teleport>

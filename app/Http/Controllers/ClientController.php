@@ -104,9 +104,9 @@ class ClientController extends Controller
 
     public function destroy(Client $client)
     {
-        if (\App\Models\Booking::where('client_id', $client->id)->exists() || \App\Models\Invoice::where('client_id', $client->id)->exists()) {
+        if ($client->total_due != 0 || \App\Models\Booking::where('client_id', $client->id)->exists() || \App\Models\Invoice::where('client_id', $client->id)->exists()) {
             return response()->json([
-                'message' => 'Cannot delete this client because they have a transaction or booking history. Deleting them would result in financial data loss.'
+                'message' => 'Cannot delete! Client has transactions or dues.'
             ], 422);
         }
 
@@ -124,7 +124,6 @@ class ClientController extends Controller
             ->get();
 
         $payments = \App\Models\Payment::where('client_id', $client->id)
-            ->where('type', 'in')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -206,5 +205,228 @@ class ClientController extends Controller
         });
 
         return response()->json(['message' => 'Due payment received successfully.', 'client' => $client]);
+    }
+
+    public function getDueInvoices(Client $client)
+    {
+        $invoices = \App\Models\Invoice::where('client_id', $client->id)
+            ->where('due', '>', 0)
+            ->get();
+            
+        return response()->json([
+            'client' => $client,
+            'invoices' => $invoices
+        ]);
+    }
+
+    public function receiveDueInvoices(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:cash,bkash,bank,card',
+            'note' => 'nullable|string',
+            'date' => 'required|date',
+            'invoices' => 'nullable|array',
+            'invoices.*.id' => 'required_with:invoices|exists:invoices,id',
+            'invoices.*.amount' => 'required_with:invoices|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01'
+        ]);
+
+        if ($validated['amount'] > max(0, $client->total_due)) {
+            return response()->json(['message' => 'Amount cannot exceed the total due.'], 422);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+            $totalPaid = 0;
+
+            if (!empty($validated['invoices'])) {
+                foreach ($validated['invoices'] as $invoiceData) {
+                    $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceData['id']);
+                    if ($invoice->client_id !== $lockedClient->id) continue;
+                    
+                    $payAmount = min($invoiceData['amount'], $invoice->due);
+                    if ($payAmount <= 0) continue;
+
+                    $invoice->paid += $payAmount;
+                    $invoice->due -= $payAmount;
+                    $invoice->save();
+
+                    $totalPaid += $payAmount;
+                }
+            }
+
+            // If user inputted an amount greater than the sum of selected invoices (or no invoices were selected),
+            // use the manually entered amount as the total paid.
+            $finalPaymentAmount = max($totalPaid, $validated['amount']);
+
+            if ($finalPaymentAmount > 0) {
+                \App\Models\Payment::create([
+                    'client_id' => $lockedClient->id,
+                    'amount' => $finalPaymentAmount,
+                    'type' => 'due receive',
+                    'payment_method' => $validated['payment_method'],
+                    'transaction_id' => 'INV-PAY-' . $lockedClient->id . '-' . uniqid(),
+                    'created_at' => $validated['date'],
+                    'updated_at' => $validated['date']
+                ]);
+
+                $lockedClient->total_due -= $finalPaymentAmount;
+                $lockedClient->save();
+            }
+        });
+
+        return response()->json(['message' => 'Payment received successfully.', 'client' => $client->fresh()]);
+    }
+
+    public function payOut(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:cash,bkash,bank,card',
+            'note' => 'nullable|string',
+            'date' => 'required|date',
+            'amount' => 'required|numeric|min:0.01'
+        ]);
+
+        $maxPayable = $client->total_due < 0 ? abs($client->total_due) : 0;
+        if ($validated['amount'] > $maxPayable) {
+            return response()->json(['message' => 'Amount cannot exceed the total advance payable.'], 422);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+
+            \App\Models\Payment::create([
+                'client_id' => $lockedClient->id,
+                'amount' => $validated['amount'],
+                'type' => 'due pay',
+                'payment_method' => $validated['payment_method'],
+                'transaction_id' => 'PAY-OUT-' . $lockedClient->id . '-' . uniqid(),
+                'created_at' => $validated['date'],
+                'updated_at' => $validated['date']
+            ]);
+
+            // Paying the client increases their due (or reduces their advance)
+            $lockedClient->total_due += $validated['amount'];
+            $lockedClient->save();
+        });
+
+        return response()->json(['message' => 'Payment sent successfully.', 'client' => $client->fresh()]);
+    }
+
+    public function processAdvance(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'receiving_advance' => 'nullable|numeric|min:0',
+            'refund_advance' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|string|in:cash,bkash,bank,card',
+            'note' => 'nullable|string',
+            'date' => 'required|date'
+        ]);
+        
+        $currentAdvance = $client->total_due < 0 ? abs($client->total_due) : 0;
+        
+        if (!empty($validated['refund_advance']) && $validated['refund_advance'] > $currentAdvance) {
+            return response()->json(['message' => 'Refund amount cannot exceed the total advance amount.'], 422);
+        }
+
+        $createdPaymentIds = [];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated, &$createdPaymentIds) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+
+            if (!empty($validated['receiving_advance']) && $validated['receiving_advance'] > 0) {
+                $payment = \App\Models\Payment::create([
+                    'client_id' => $lockedClient->id,
+                    'amount' => $validated['receiving_advance'],
+                    'type' => 'advance receive',
+                    'payment_method' => $validated['payment_method'],
+                    'transaction_id' => 'ADV-REC-' . $lockedClient->id . '-' . uniqid(),
+                    'created_at' => $validated['date'],
+                    'updated_at' => $validated['date']
+                ]);
+                $createdPaymentIds[] = $payment->id;
+                // Receiving advance reduces total due (increases advance balance)
+                $lockedClient->total_due -= $validated['receiving_advance'];
+            }
+
+            if (!empty($validated['refund_advance']) && $validated['refund_advance'] > 0) {
+                $payment = \App\Models\Payment::create([
+                    'client_id' => $lockedClient->id,
+                    'amount' => $validated['refund_advance'],
+                    'type' => 'advance refund',
+                    'payment_method' => $validated['payment_method'],
+                    'transaction_id' => 'ADV-REF-' . $lockedClient->id . '-' . uniqid(),
+                    'created_at' => $validated['date'],
+                    'updated_at' => $validated['date']
+                ]);
+                $createdPaymentIds[] = $payment->id;
+                // Refunding advance increases total due (decreases advance balance)
+                $lockedClient->total_due += $validated['refund_advance'];
+            }
+            
+            $lockedClient->save();
+        });
+
+        return response()->json([
+            'message' => 'Advance processed successfully.', 
+            'client' => $client->fresh(),
+            'payments' => $createdPaymentIds
+        ]);
+    }
+
+    public function dismissDueInvoices(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:dismiss',
+            'note' => 'nullable|string',
+            'date' => 'required|date',
+            'invoices' => 'nullable|array',
+            'invoices.*.id' => 'required_with:invoices|exists:invoices,id',
+            'invoices.*.amount' => 'required_with:invoices|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01'
+        ]);
+
+        if ($validated['amount'] > max(0, $client->total_due)) {
+            return response()->json(['message' => 'Amount cannot exceed the total due.'], 422);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+            $totalDismissed = 0;
+
+            if (!empty($validated['invoices'])) {
+                foreach ($validated['invoices'] as $invoiceData) {
+                    $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceData['id']);
+                    if ($invoice->client_id !== $lockedClient->id) continue;
+                    
+                    $dismissAmount = min($invoiceData['amount'], $invoice->due);
+                    if ($dismissAmount <= 0) continue;
+
+                    $invoice->due -= $dismissAmount;
+                    $invoice->save();
+
+                    $totalDismissed += $dismissAmount;
+                }
+            }
+
+            $finalAmount = max($totalDismissed, $validated['amount']);
+
+            if ($finalAmount > 0) {
+                \App\Models\Payment::create([
+                    'client_id' => $lockedClient->id,
+                    'amount' => $finalAmount,
+                    'type' => 'due dismiss',
+                    'payment_method' => 'dismiss',
+                    'transaction_id' => 'DISMISS-' . $lockedClient->id . '-' . uniqid(),
+                    'created_at' => $validated['date'],
+                    'updated_at' => $validated['date']
+                ]);
+
+                $lockedClient->total_due -= $finalAmount;
+                $lockedClient->save();
+            }
+        });
+
+        return response()->json(['message' => 'Invoices dismissed successfully.', 'client' => $client->fresh()]);
     }
 }

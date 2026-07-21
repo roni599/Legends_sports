@@ -61,55 +61,81 @@
         </div>
       </div>
 
-      <!-- Ledger Table -->
-      <div class="content-card">
+      <!-- Ledger History -->
+      <div class="content-card mb-4">
         <div class="p-4">
+          <h5 class="text-light mb-3"><i class="bi bi-journal-text me-2"></i>Ledger History</h5>
           <div class="table-responsive">
             <table class="table table-dark table-striped table-hover align-middle mb-0">
               <thead>
                 <tr>
                   <th>SL</th>
                   <th>Date</th>
-                  <th>Invoice</th>
-                  <th>Ground</th>
+                  <th>ID</th>
+                  <th>Ground/Info</th>
                   <th>Slot</th>
                   <th>Status</th>
-                  <th class="text-center">Booked</th>
-                  <th class="text-center">Play</th>
-                  <th class="text-end">Amount (৳)</th>
+                  <th>Type</th>
+                  <th>Method</th>
+                  <th class="text-end">Amount/Price (৳)</th>
                   <th class="text-end">Due (৳)</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="ledgerStore.bookings.length === 0">
-                  <td colspan="10" class="text-center py-4">No booking history found</td>
+                <tr v-if="mergedHistory.length === 0">
+                  <td colspan="10" class="text-center py-4">No ledger history found</td>
                 </tr>
-                <template v-for="(booking, bIndex) in ledgerStore.bookings" :key="booking.id">
-                  <tr v-for="(slot, sIndex) in booking.slots" :key="slot.id">
-                    <td class="text-white">{{ getRowIndex(bIndex, sIndex) }}</td>
-                    <td class="text-white">{{ formatDate(slot.date) }}</td>
-                    <td><span class="badge bg-secondary">#INV-{{ booking.id.toString().padStart(6, '0') }}</span></td>
-                    <td class="text-white">{{ booking.ground?.name }}</td>
+                <template v-for="(item, index) in mergedHistory" :key="index">
+                  <!-- Booking Row -->
+                  <tr v-if="item.type === 'booking'">
+                    <td class="text-white">{{ index + 1 }}</td>
+                    <td class="text-white">{{ formatDate(item.data.slot ? item.data.slot.date : item.created_at) }}</td>
+                    <td><span class="badge bg-secondary">#INV-{{ item.data.booking.id.toString().padStart(6, '0') }}</span></td>
+                    <td class="text-white">{{ item.data.booking.ground?.name || '-' }}</td>
                     <td>
-                      <span class="badge bg-dark border text-light">{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</span>
+                      <span v-if="item.data.slot" class="badge bg-dark border text-light">{{ formatTime(item.data.slot.start_time) }} - {{ formatTime(item.data.slot.end_time) }}</span>
+                      <span v-else class="text-muted">-</span>
                     </td>
                     <td>
-                      <span class="badge rounded-pill" :class="getStatusClass(booking.status)">{{ booking.status.toUpperCase() }}</span>
+                      <span class="badge rounded-pill" :class="getStatusClass(item.data.booking.status)">{{ item.data.booking.status.toUpperCase() }}</span>
                     </td>
-                    <td class="text-center text-white fw-bold">1</td>
-                    <td class="text-center text-white fw-bold">{{ booking.status === 'completed' ? 1 : 0 }}</td>
-                    <td class="text-end text-white fw-bold">৳ {{ slot.price }}</td>
-                    <td class="text-end fw-bold" :class="getSlotDue(booking, slot) > 0 ? 'text-danger' : 'text-success'">
-                      ৳ {{ getSlotDue(booking, slot) }}
+                    <td><span class="badge bg-info text-dark">BOOKING</span></td>
+                    <td class="text-muted">-</td>
+                    <td class="text-end text-white fw-bold">৳ {{ item.data.slot ? item.data.slot.price : item.data.booking.total_amount }}</td>
+                    <td class="text-end fw-bold" :class="(item.data.slot ? getSlotDue(item.data.booking, item.data.slot) : item.data.booking.due_amount) > 0 ? 'text-danger' : 'text-success'">
+                      ৳ {{ item.data.slot ? getSlotDue(item.data.booking, item.data.slot) : item.data.booking.due_amount }}
                     </td>
+                  </tr>
+
+                  <!-- Payment Row -->
+                  <tr v-else-if="item.type === 'payment'">
+                    <td class="text-white">{{ index + 1 }}</td>
+                    <td class="text-white">{{ formatDate(item.data.payment.created_at) }}</td>
+                    <td>
+                      <a v-if="item.data.payment.type.includes('advance')" :href="`/payments/${item.data.payment.id}/print`" target="_blank" class="badge bg-primary text-decoration-none" title="Print Receipt">
+                        {{ item.data.payment.transaction_id || '#' + item.data.payment.id.toString().padStart(6, '0') }} <i class="bi bi-printer ms-1"></i>
+                      </a>
+                      <span v-else class="badge bg-secondary">{{ item.data.payment.transaction_id || '#' + item.data.payment.id.toString().padStart(6, '0') }}</span>
+                    </td>
+                    <td class="text-white text-capitalize">{{ formatPaymentType(item.data.payment.type) }}</td>
+                    <td class="text-muted">-</td>
+                    <td class="text-muted">-</td>
+                    <td>
+                      <span class="badge rounded-pill" :class="getPaymentTypeClass(item.data.payment.type)">
+                        {{ formatPaymentType(item.data.payment.type) }}
+                      </span>
+                    </td>
+                    <td class="text-white text-capitalize">{{ item.data.payment.payment_method }}</td>
+                    <td class="text-end fw-bold" :class="['due pay', 'advance refund'].includes(item.data.payment.type) ? 'text-danger' : 'text-success'">
+                      ৳ {{ item.data.payment.amount }}
+                    </td>
+                    <td class="text-muted text-end">-</td>
                   </tr>
                 </template>
               </tbody>
               <tfoot v-if="ledgerStore.bookings.length > 0">
                 <tr class="border-top border-secondary">
-                  <td colspan="6" class="text-end fw-bold text-light">Totals</td>
-                  <td class="text-center fw-bold text-white fs-6">{{ ledgerStore.summary.total_booked }}</td>
-                  <td class="text-center fw-bold text-white fs-6">{{ ledgerStore.summary.total_plays }}</td>
+                  <td colspan="8" class="text-end fw-bold text-light">Totals (from Bookings)</td>
                   <td class="text-end fw-bold text-white fs-6">৳ {{ ledgerStore.summary.total_booked_amount }}</td>
                   <td class="text-end fw-bold" :class="ledgerStore.summary.total_due > 0 ? 'text-danger' : 'text-success'">৳ {{ ledgerStore.summary.total_due }}</td>
                 </tr>
@@ -118,12 +144,13 @@
           </div>
         </div>
       </div>
+
     </template>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLedgerStore } from '../../../store/ledger';
 
@@ -160,6 +187,24 @@ const getStatusClass = (status) => {
   return map[status] || 'bg-secondary';
 };
 
+const getPaymentTypeClass = (type) => {
+  const map = {
+    'due receive': 'bg-success',
+    'due pay': 'bg-danger',
+    'due dismiss': 'bg-warning text-dark',
+    'advance receive': 'bg-success',
+    'advance refund': 'bg-danger',
+    'book pay': 'bg-primary',
+    'in': 'bg-success',
+    'out': 'bg-danger'
+  };
+  return map[type] || 'bg-secondary';
+};
+
+const formatPaymentType = (type) => {
+  return String(type).toUpperCase();
+};
+
 const getSlotDue = (booking, slot) => {
   if (booking.status === 'cancelled') return 0;
   const totalAmount = parseFloat(booking.total_amount || 0);
@@ -170,6 +215,46 @@ const getSlotDue = (booking, slot) => {
   const slotShare = totalAmount > 0 ? (slot.price / totalAmount) : (1 / slotCount);
   return Math.round(due * slotShare);
 };
+
+const mergedHistory = computed(() => {
+  const items = [];
+  
+  // Add bookings (split by slots if you want them on separate rows, 
+  // or keep them as booking objects. The previous table split them by slots.)
+  // Let's add them as per slot to match the previous detailed view.
+  ledgerStore.bookings.forEach(booking => {
+    if (booking.slots && booking.slots.length > 0) {
+      booking.slots.forEach(slot => {
+        items.push({
+          type: 'booking',
+          date: new Date(booking.created_at),
+          created_at: booking.created_at,
+          data: { booking, slot }
+        });
+      });
+    } else {
+      items.push({
+        type: 'booking',
+        date: new Date(booking.created_at),
+        created_at: booking.created_at,
+        data: { booking, slot: null }
+      });
+    }
+  });
+
+  // Add payments
+  ledgerStore.payments.forEach(payment => {
+    items.push({
+      type: 'payment',
+      date: new Date(payment.created_at),
+      created_at: payment.created_at,
+      data: { payment }
+    });
+  });
+
+  // Sort descending by date
+  return items.sort((a, b) => b.date - a.date);
+});
 
 onMounted(() => {
   ledgerStore.fetchLedger(route.params.id);

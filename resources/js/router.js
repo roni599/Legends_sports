@@ -43,10 +43,35 @@ const routes = [
         meta: { permission: 'manage_bookings' }
       },
       {
+        path: 'clients/:id/pay',
+        name: 'ClientPay',
+        component: () => import('./modules/clients/views/Pay.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      // Trigger Vite HMR update
+      {
+        path: 'clients/:id/receive',
+        name: 'ClientReceive',
+        component: () => import('./modules/clients/views/Receive.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
+        path: 'clients/:id/dismiss',
+        name: 'ClientDismiss',
+        component: () => import('./modules/clients/views/Dismiss.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
         path: 'clients/:id/ledger',
         name: 'ClientLedger',
         component: () => import('./modules/clients/views/Ledger.vue'),
         meta: { permission: 'view_clients' }
+      },
+      {
+        path: 'clients/:id/advance',
+        name: 'ClientAdvance',
+        component: () => import('./modules/clients/views/Advance.vue'),
+        meta: { permission: 'edit_clients' }
       },
       {
         path: 'grounds',
@@ -168,6 +193,12 @@ const routes = [
     path: '/print-invoice/:id',
     name: 'PrintInvoice',
     component: () => import('./modules/bookings/views/PrintInvoice.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/payments/:id/print',
+    name: 'PrintAdvanceReceipt',
+    component: () => import('./modules/clients/views/PrintAdvanceReceipt.vue'),
     meta: { requiresAuth: true }
   }
 ];

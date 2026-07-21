@@ -277,7 +277,7 @@ class BookingController extends Controller
                 \App\Models\Payment::create([
                     'client_id' => $validated['client_id'],
                     'amount' => $paidAmount,
-                    'type' => 'in',
+                    'type' => 'book pay',
                     'payment_method' => 'cash',
                     'transaction_id' => 'BKG-' . $booking->id
                 ]);
@@ -390,7 +390,7 @@ class BookingController extends Controller
                 \App\Models\Payment::create([
                     'client_id' => $lockedBooking->client_id,
                     'amount' => $payment,
-                    'type' => 'in',
+                    'type' => 'book pay',
                     'payment_method' => 'cash',
                     'transaction_id' => 'BKG-UPD-' . $lockedBooking->id . '-' . uniqid()
                 ]);
