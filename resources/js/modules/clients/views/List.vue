@@ -83,7 +83,7 @@
   <!-- 3-Dot Dropdown Menu -->
   <Teleport to="body">
     <div v-if="openDropdown" class="dropdown-backdrop" @click="openDropdown = null"></div>
-    <ul v-if="openDropdown" class="custom-dropdown-menu" :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px' }">
+    <ul v-if="openDropdown" class="custom-dropdown-menu" :style="dropdownPos">
       <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/edit`" @click="openDropdown = null"><i class="bi bi-pencil-square me-2"></i>Edit</router-link></li>
       <li><hr class="dropdown-divider"></li>
       <li><router-link class="dropdown-item" :to="`/clients/${dropdownClient.id}/ledger`" @click="openDropdown = null"><i class="bi bi-journal-text me-2"></i>Ledger</router-link></li>
@@ -217,7 +217,24 @@ const toggleDropdown = (id, event) => {
     return;
   }
   const rect = event.target.getBoundingClientRect();
-  dropdownPos.value = { top: rect.bottom + 4, left: rect.right - 160 };
+  let leftPos = rect.right - 160;
+  
+  if (rect.bottom + 380 > window.innerHeight) {
+    // Dropup (open upwards from the button)
+    dropdownPos.value = { 
+      bottom: (window.innerHeight - rect.top + 4) + 'px', 
+      left: leftPos + 'px',
+      top: 'auto'
+    };
+  } else {
+    // Dropdown (open downwards from the button)
+    dropdownPos.value = { 
+      top: (rect.bottom + 4) + 'px', 
+      left: leftPos + 'px',
+      bottom: 'auto'
+    };
+  }
+
   dropdownClient.value = clientStore.clients.find(c => c.id === id);
   openDropdown.value = id;
 };
