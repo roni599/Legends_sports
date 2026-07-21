@@ -122,6 +122,7 @@ class BookingController extends Controller
             'date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
+            'pricing_rule_id' => 'required|exists:pricing_rules,id'
         ]);
 
         $ground = \App\Models\Ground::findOrFail($validated['ground_id']);
@@ -138,58 +139,15 @@ class BookingController extends Controller
         }
 
         $durationHours = $durationMinutes / 60;
-
-        $basePrice = $ground->base_price_per_hour * $durationHours;
-        $totalPrice = $basePrice;
-
         $appliedRules = [];
 
-        // Fetch active rules applicable to this ground or all grounds
-        $rules = \App\Models\PricingRule::where('status', 'active')
-            ->where(function($q) use ($ground) {
-                $q->where('ground_id', $ground->id)->orWhereNull('ground_id');
-            })->get();
-
-        foreach ($rules as $rule) {
-            $applies = false;
-            
-            if ($rule->type === 'weekend') {
-                // In BD, weekend is Friday (5) or Saturday (6)
-                $dayOfWeek = $start->dayOfWeekIso;
-                if ($dayOfWeek == 5 || $dayOfWeek == 6) {
-                    $applies = true;
-                }
-            } elseif ($rule->type === 'peak_hour') {
-                // Check if booking overlaps with peak hour (handling midnight crossing rules)
-                $rs = \Carbon\Carbon::parse($rule->start_time)->format('H:i:s');
-                $re = \Carbon\Carbon::parse($rule->end_time)->format('H:i:s');
-                $bs = \Carbon\Carbon::parse($validated['start_time'])->format('H:i:s');
-                $be = \Carbon\Carbon::parse($validated['end_time'])->format('H:i:s');
-                
-                if ($rs > $re) {
-                    // Rule crosses midnight (e.g., 20:00 to 02:00)
-                    if (($bs < "24:00:00" && $be > $rs) || ($bs < $re && $be > "00:00:00")) {
-                        $applies = true;
-                    }
-                } else {
-                    // Standard rule (e.g., 18:00 to 22:00)
-                    if ($bs < $re && $be > $rs) {
-                        $applies = true;
-                    }
-                }
-            } elseif ($rule->type === 'tournament') {
-                // This would typically be a manual toggle from the frontend, but we'll assume false for standard calculations
-                $applies = $request->input('is_tournament', false);
-            }
-
-            if ($applies) {
-                $totalPrice += $rule->price_modifier;
-                $appliedRules[] = [
-                    'name' => $rule->name,
-                    'modifier' => $rule->price_modifier
-                ];
-            }
-        }
+        $rule = \App\Models\PricingRule::findOrFail($validated['pricing_rule_id']);
+        $basePrice = $rule->price_modifier;
+        $totalPrice = $basePrice;
+        $appliedRules[] = [
+            'name' => $rule->name,
+            'modifier' => $rule->price_modifier
+        ];
 
         // Ensure total price doesn't go below 0 due to discounts
         $totalPrice = max(0, $totalPrice);
@@ -212,6 +170,7 @@ class BookingController extends Controller
             'end_time' => 'required|date_format:H:i',
             'discount' => 'nullable|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
+            'pricing_rule_id' => 'required|exists:pricing_rules,id',
         ]);
 
         if ($validated['end_time'] === $validated['start_time']) {
@@ -249,40 +208,16 @@ class BookingController extends Controller
         }
 
         $durationHours = $durationMinutes / 60;
-        $totalAmount = $ground->base_price_per_hour * $durationHours;
-
-        $rules = \App\Models\PricingRule::where('status', 'active')
-            ->where(function($q) use ($ground) {
-                $q->where('ground_id', $ground->id)->orWhereNull('ground_id');
-            })->get();
 
         $appliedRules = [];
-        foreach ($rules as $rule) {
-            $applies = false;
-            if ($rule->type === 'weekend') {
-                $dayOfWeek = $start->dayOfWeekIso;
-                if ($dayOfWeek == 5 || $dayOfWeek == 6) $applies = true;
-            } elseif ($rule->type === 'peak_hour') {
-                $rs = \Carbon\Carbon::parse($rule->start_time)->format('H:i:s');
-                $re = \Carbon\Carbon::parse($rule->end_time)->format('H:i:s');
-                $bs = \Carbon\Carbon::parse($validated['start_time'])->format('H:i:s');
-                $be = \Carbon\Carbon::parse($validated['end_time'])->format('H:i:s');
-                
-                if ($rs > $re) {
-                    if (($bs < "24:00:00" && $be > $rs) || ($bs < $re && $be > "00:00:00")) $applies = true;
-                } else {
-                    if ($bs < $re && $be > $rs) $applies = true;
-                }
-            }
-            if ($applies) {
-                $totalAmount += $rule->price_modifier;
-                $appliedRules[] = [
-                    'name' => $rule->name,
-                    'type' => $rule->type,
-                    'modifier' => $rule->price_modifier
-                ];
-            }
-        }
+
+        $rule = \App\Models\PricingRule::findOrFail($validated['pricing_rule_id']);
+        $totalAmount = $rule->price_modifier;
+        $appliedRules[] = [
+            'name' => $rule->name,
+            'type' => $rule->type,
+            'modifier' => $rule->price_modifier
+        ];
         $totalAmount = max(0, $totalAmount);
 
         // 3. Financial calculations

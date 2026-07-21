@@ -29,6 +29,18 @@ export const usePricingStore = defineStore('pricing', {
         this.loading = false;
       }
     },
+
+    async fetchAllRules() {
+      this.loading = true;
+      try {
+        const response = await axios.get('/api/pricing-rules?all=true');
+        this.rules = response.data;
+      } catch (error) {
+        console.error("Error fetching all pricing rules", error);
+      } finally {
+        this.loading = false;
+      }
+    },
     
     async createRule(data) {
       this.loading = true;

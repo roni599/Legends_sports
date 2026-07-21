@@ -28,7 +28,7 @@
                     :options="clientStore.allClients"
                     :custom-label="clientLabel"
                     track-by="id"
-                    placeholder="-- Search Client --"
+                    placeholder="Select Client"
                     :searchable="true"
                     :allow-empty="false"
                     class="dark-multiselect"
@@ -49,7 +49,7 @@
                     :options="bookingStore.activeGrounds"
                     :custom-label="groundLabel"
                     track-by="id"
-                    placeholder="Press Enter to select"
+                    placeholder="Select Ground"
                     :searchable="true"
                     :allow-empty="false"
                     class="dark-multiselect"
@@ -60,6 +60,25 @@
                 <button type="button" class="btn btn-success px-3 ms-2 d-flex align-items-center" @click="openGroundModal" title="Add New Ground">
                   <i class="bi bi-plus-lg"></i>
                 </button>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label fw-bold text-secondary">Pricing Rule</label>
+              <div class="d-flex align-items-stretch">
+                <div class="client-multiselect-wrap flex-grow-1">
+                  <VueMultiselect
+                    v-model="selectedPricingRuleObj"
+                    :options="pricingStore.rules"
+                    :custom-label="pricingRuleLabel"
+                    track-by="id"
+                    placeholder="Select Pricing Rule"
+                    :searchable="true"
+                    :allow-empty="false"
+                    class="dark-multiselect"
+                    @select="onPricingRuleSelect"
+                  >
+                  </VueMultiselect>
+                </div>
               </div>
             </div>
             <div class="col-md-4">
@@ -248,15 +267,18 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import { useBookingStore } from '@/store/bookings';
 import { useClientStore } from '@/store/clients';
 import { useGroundStore } from '@/store/grounds';
+import { usePricingStore } from '@/store/pricing';
 
 const router = useRouter();
 const route = useRoute();
 const bookingStore = useBookingStore();
 const clientStore = useClientStore();
 const groundStore = useGroundStore();
+const pricingStore = usePricingStore();
 
 const selectedClientObj = ref(null);
 const selectedGroundObj = ref(null);
+const selectedPricingRuleObj = ref(null);
 const showClientModal = ref(false);
 const showGroundModal = ref(false);
 
@@ -310,7 +332,8 @@ const form = ref({
     ? `${String(parseInt(route.query.start_time.split(':')[0]) + 1).padStart(2, '0')}:${route.query.start_time.split(':')[1]}`
     : defaultSlot.end,
   discount: 0,
-  paid_amount: 0
+  paid_amount: 0,
+  pricing_rule_id: ''
 });
 
 const minTime = computed(() => {
@@ -331,6 +354,10 @@ const groundLabel = (ground) => {
   return ground.name;
 };
 
+const pricingRuleLabel = (rule) => {
+  return `${rule.name} (৳ ${rule.price_modifier})`;
+};
+
 watch(selectedClientObj, (newVal) => {
   form.value.client_id = newVal ? newVal.id : '';
 });
@@ -341,6 +368,15 @@ watch(selectedGroundObj, (newVal) => {
 });
 
 const onGroundSelect = () => {
+  calculatePrice();
+};
+
+watch(selectedPricingRuleObj, (newVal) => {
+  form.value.pricing_rule_id = newVal ? newVal.id : '';
+  calculatePrice();
+});
+
+const onPricingRuleSelect = () => {
   calculatePrice();
 };
 
@@ -371,7 +407,7 @@ const onDateChange = () => {
 };
 
 const calculatePrice = async () => {
-  if (!form.value.ground_id || !form.value.date || !form.value.start_time || !form.value.end_time) {
+  if (!form.value.ground_id || !form.value.date || !form.value.start_time || !form.value.end_time || !form.value.pricing_rule_id) {
     bookingStore.resetPrice();
     return;
   }
@@ -384,7 +420,8 @@ const calculatePrice = async () => {
     ground_id: form.value.ground_id,
     date: form.value.date,
     start_time: form.value.start_time,
-    end_time: form.value.end_time
+    end_time: form.value.end_time,
+    pricing_rule_id: form.value.pricing_rule_id
   });
 };
 
@@ -450,6 +487,7 @@ const submitGround = async () => {
 onMounted(async () => {
   clientStore.fetchAllClients();
   await bookingStore.fetchGrounds();
+  await pricingStore.fetchAllRules();
   if (form.value.ground_id) {
     selectedGroundObj.value = bookingStore.activeGrounds.find(g => g.id == form.value.ground_id) || null;
     calculatePrice();

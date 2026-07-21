@@ -20,6 +20,10 @@ class PricingRuleController extends Controller
                   });
         }
         
+        if ($request->has('all')) {
+            return $query->where('status', 'active')->get();
+        }
+        
         return $query->paginate(10);
     }
 
