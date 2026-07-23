@@ -79,7 +79,7 @@
                 <tr>
                   <th>SL</th>
                   <th>Date</th>
-                  <th>ID</th>
+                  <th>Invoice</th>
                   <th>Ground/Info</th>
                   <th>Slot</th>
                   <th>Status</th>
@@ -98,7 +98,12 @@
                   <tr v-if="item.type === 'booking'">
                     <td class="text-white">{{ index + 1 }}</td>
                     <td class="text-white">{{ formatDate(item.data.booking.slots?.[0]?.date || item.created_at) }}</td>
-                    <td><span class="badge bg-secondary">#INV-{{ item.data.booking.id.toString().padStart(6, '0') }}</span></td>
+                    <td>
+                      <a v-if="item.data.booking.invoice" :href="`/print-invoice/${item.data.booking.invoice.id}`" target="_blank" class="badge bg-primary text-decoration-none" title="Print Invoice">
+                        {{ item.data.booking.invoice.invoice_number }} <i class="bi bi-printer ms-1"></i>
+                      </a>
+                      <span v-else class="badge bg-secondary">#INV-{{ item.data.booking.id.toString().padStart(6, '0') }}</span>
+                    </td>
                     <td class="text-white">{{ item.data.booking.ground?.name || '-' }}</td>
                     <td>
                       <span v-if="item.data.booking.slots?.length > 1" class="badge bg-dark border text-light">{{ item.data.booking.slots.length }} Slots</span>
@@ -106,13 +111,14 @@
                       <span v-else class="text-muted">-</span>
                     </td>
                     <td>
-                      <span class="badge rounded-pill" :class="getStatusClass(item.data.booking.status)">{{ item.data.booking.status.toUpperCase() }}</span>
+                      <span class="badge rounded-pill" :class="getStatusClass(item.data.booking.display_status.toLowerCase())">{{ item.data.booking.display_status }}</span>
                     </td>
                     <td><span class="badge bg-info text-dark">BOOKING</span></td>
                     <td class="text-muted">-</td>
                     <td class="text-end text-white fw-bold">৳ {{ item.data.booking.total_amount }}</td>
-                    <td class="text-end fw-bold" :class="item.data.booking.due_amount > 0 ? 'text-danger' : 'text-success'">
-                      ৳ {{ item.data.booking.due_amount }}
+                    <td class="text-end fw-bold" :class="item.running_due > 0 ? 'text-danger' : (item.running_due < 0 ? 'text-success' : 'text-muted')">
+                      <span v-if="item.running_due < 0">- ৳ {{ Math.abs(item.running_due).toFixed(2) }}</span>
+                      <span v-else>৳ {{ item.running_due.toFixed(2) }}</span>
                     </td>
                   </tr>
 
@@ -121,30 +127,39 @@
                     <td class="text-white">{{ index + 1 }}</td>
                     <td class="text-white">{{ formatDate(item.data.payment.created_at) }}</td>
                     <td>
-                      <a v-if="item.data.payment.invoice" :href="`/print-invoice/${item.data.payment.invoice.id}`" target="_blank" class="badge bg-primary text-decoration-none" title="Print Invoice">
-                        {{ item.data.payment.invoice.invoice_number }} <i class="bi bi-printer ms-1"></i>
-                      </a>
-                      <a v-else-if="item.data.payment.type.includes('advance')" :href="`/payments/${item.data.payment.id}/print`" target="_blank" class="badge bg-primary text-decoration-none" title="Print Receipt">
+                      <a :href="`/payments/${item.data.payment.id}/print`" target="_blank" class="badge bg-primary text-decoration-none" title="Print Receipt">
                         {{ item.data.payment.transaction_id || '#' + item.data.payment.id.toString().padStart(6, '0') }} <i class="bi bi-printer ms-1"></i>
                       </a>
-                      <span v-else class="badge bg-secondary">{{ item.data.payment.transaction_id || '#' + item.data.payment.id.toString().padStart(6, '0') }}</span>
                     </td>
-                    <td class="text-white text-capitalize">{{ formatPaymentType(item.data.payment.type) }}</td>
-                    <td class="text-white small">
-                      <span v-if="item.data.payment.user" class="text-muted"><i class="bi bi-person-fill"></i> {{ item.data.payment.user.name }}</span>
+                    <td class="text-white text-capitalize">
+                      <span v-if="item.data.payment.invoice?.booking?.ground?.name">
+                        {{ item.data.payment.invoice.booking.ground.name }} <small v-if="item.data.payment.note" class="text-muted">({{ item.data.payment.note }})</small>
+                      </span>
+                      <span v-else>{{ item.data.payment.note || '-' }}</span>
+                    </td>
+                    <td>
+                      <span v-if="item.data.payment.invoice?.booking?.slots?.length > 1" class="badge bg-dark border text-light">{{ item.data.payment.invoice.booking.slots.length }} Slots</span>
+                      <span v-else-if="item.data.payment.invoice?.booking?.slots?.length === 1" class="badge bg-dark border text-light">{{ formatTime(item.data.payment.invoice.booking.slots[0].start_time) }} - {{ formatTime(item.data.payment.invoice.booking.slots[0].end_time) }}</span>
                       <span v-else class="text-muted">-</span>
                     </td>
-                    <td class="text-muted">-</td>
+                    <td>
+                      <span class="badge rounded-pill" :class="getPaymentStatusClass2(item.data.payment.display_status)">
+                        {{ item.data.payment.display_status }}
+                      </span>
+                    </td>
                     <td>
                       <span class="badge rounded-pill" :class="getPaymentTypeClass(item.data.payment.type)">
                         {{ formatPaymentType(item.data.payment.type) }}
                       </span>
                     </td>
                     <td class="text-white text-capitalize">{{ item.data.payment.payment_method }}</td>
-                    <td class="text-end fw-bold" :class="['due pay', 'advance refund'].includes(item.data.payment.type) ? 'text-danger' : 'text-success'">
+                    <td class="text-end fw-bold" :class="['due pay', 'advance refund', 'cancelled booking', 'out', 'penalty'].includes(item.data.payment.type) ? 'text-danger' : 'text-success'">
                       ৳ {{ item.data.payment.amount }}
                     </td>
-                    <td class="text-muted text-end">-</td>
+                    <td class="text-end fw-bold" :class="item.running_due > 0 ? 'text-danger' : (item.running_due < 0 ? 'text-success' : 'text-muted')">
+                      <span v-if="item.running_due < 0">- ৳ {{ Math.abs(item.running_due).toFixed(2) }}</span>
+                      <span v-else>৳ {{ item.running_due.toFixed(2) }}</span>
+                    </td>
                   </tr>
                 </template>
               </tbody>
@@ -175,8 +190,9 @@ const getRowIndex = (bIndex, sIndex) => {
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
-  const [year, month, day] = dateString.split('-');
-  return new Date(year, month - 1, day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const formatTime = (timeString) => {
@@ -204,13 +220,32 @@ const getPaymentTypeClass = (type) => {
     'advance refund': 'bg-danger',
     'book pay': 'bg-primary',
     'in': 'bg-success',
-    'out': 'bg-danger'
+    'out': 'bg-danger',
+    'cancelled booking': 'bg-danger',
+    'penalty': 'bg-warning text-dark'
   };
   return map[type] || 'bg-secondary';
 };
 
 const formatPaymentType = (type) => {
-  return String(type).toUpperCase();
+  const map = {
+    'due receive': 'Due Received',
+    'due pay': 'Due Paid',
+    'due dismiss': 'Due Dismissed',
+    'advance receive': 'Advance Received',
+    'advance refund': 'Advance Refunded',
+    'book pay': 'Booking Payment',
+    'in': 'Payment Received',
+    'out': 'Invoice Refund',
+    'cancelled booking': 'Cancelled Booking'
+  };
+  return (map[type] || type).toUpperCase();
+};
+
+const getPaymentStatusClass2 = (statusText) => {
+  if (statusText === 'CANCELLED') return 'bg-danger';
+  if (statusText === 'COMPLETED') return 'bg-success';
+  return 'bg-info text-dark';
 };
 
 const mergedHistory = computed(() => {
@@ -222,22 +257,40 @@ const mergedHistory = computed(() => {
       type: 'booking',
       date: new Date(booking.created_at),
       created_at: booking.created_at,
-      data: { booking }
+      data: { booking },
+      amount_value: parseFloat(booking.net_amount || booking.total_amount),
+      is_addition: true,
+      running_due: booking.running_due
     });
   });
 
   // Add payments
   ledgerStore.payments.forEach(payment => {
+    const pType = payment.type;
+    const amount = parseFloat(payment.amount);
+    let is_addition = false;
+    
+    if (['due pay', 'advance refund', 'out', 'penalty'].includes(pType)) {
+      is_addition = true;
+    } else if (['due receive', 'advance receive', 'book pay', 'cancelled booking'].includes(pType)) {
+      is_addition = false;
+    }
+
     items.push({
       type: 'payment',
       date: new Date(payment.created_at),
       created_at: payment.created_at,
-      data: { payment }
+      data: { payment },
+      amount_value: amount,
+      is_addition: is_addition,
+      running_due: payment.running_due
     });
   });
 
-  // Sort descending by date
-  return items.sort((a, b) => b.date - a.date);
+  // Sort ascending by date
+  items.sort((a, b) => a.date - b.date);
+
+  return items;
 });
 
 onMounted(() => {

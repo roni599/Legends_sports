@@ -5,13 +5,14 @@
       <p class="text-muted mb-0 text-sm">123 Arena Road, Sports City, BD</p>
       <p class="text-muted mb-0 text-sm">Phone: +880 1234 567890</p>
       <hr class="border-secondary mt-3 mb-3">
-      <h5 class="fw-bold text-uppercase">Advance Receipt</h5>
+      <h5 class="fw-bold text-uppercase">{{ receiptTitle }}</h5>
     </div>
 
     <div class="row mb-4 text-sm">
       <div class="col-6">
         <p class="mb-1"><span class="fw-bold">Receipt No:</span> {{ payment.transaction_id || '#' + payment.id.toString().padStart(6, '0') }}</p>
         <p class="mb-1"><span class="fw-bold">Date:</span> {{ formatDate(payment.created_at) }}</p>
+        <p class="mb-1 text-capitalize"><span class="fw-bold">Type:</span> {{ payment.type }}</p>
       </div>
       <div class="col-6 text-end">
         <p class="mb-1"><span class="fw-bold">Client:</span> {{ client.name }}</p>
@@ -24,24 +25,20 @@
       <table class="table table-borderless table-sm w-100" style="max-width: 400px;">
         <tbody>
           <tr>
-            <td class="fw-bold ps-0">{{ isRefund ? 'Refund Amount' : 'Received Amount' }}:</td>
-            <td class="text-end fw-bold">{{ payment.amount.toFixed(2) }}</td>
+            <td class="fw-bold ps-0">{{ amountLabel }}:</td>
+            <td class="text-end fw-bold">{{ parseFloat(payment.amount).toFixed(2) }}</td>
           </tr>
-          <tr>
-            <td class="fw-bold ps-0">Total Advanced:</td>
-            <td class="text-end">{{ totalAdvanced.toFixed(2) }}</td>
+          <tr v-if="['advance receive', 'advance refund'].includes(payment.type)">
+            <td class="fw-bold ps-0">Previous Balance:</td>
+            <td class="text-end">{{ parseFloat(totalAdvanced).toFixed(2) }}</td>
           </tr>
-          <tr>
-            <td class="fw-bold ps-0">{{ isRefund ? 'Total Refunded' : 'Total Received' }}:</td>
-            <td class="text-end">{{ payment.amount.toFixed(2) }}</td>
-          </tr>
-          <tr class="border-top">
-            <td class="fw-bold ps-0">Remaining Advance:</td>
-            <td class="text-end fw-bold">{{ remainingAdvance.toFixed(2) }}</td>
+          <tr v-if="['advance receive', 'advance refund'].includes(payment.type)" class="border-top">
+            <td class="fw-bold ps-0">Current Balance:</td>
+            <td class="text-end fw-bold">{{ parseFloat(remainingAdvance).toFixed(2) }}</td>
           </tr>
         </tbody>
       </table>
-      <p class="mt-2 text-sm"><span class="fw-bold">In Words:</span> {{ numberToWords(payment.amount) }} TK Only</p>
+      <p class="mt-2 text-sm"><span class="fw-bold">In Words:</span> {{ numberToWords(parseFloat(payment.amount)) }} TK Only</p>
     </div>
 
     <h6 class="fw-bold mb-2">Payment Details</h6>
@@ -61,7 +58,7 @@
           <td>{{ formatDate(payment.created_at) }}</td>
           <td class="text-capitalize">{{ payment.payment_method }}</td>
           <td>-</td>
-          <td class="text-end">TK {{ payment.amount.toFixed(2) }}</td>
+          <td class="text-end">TK {{ parseFloat(payment.amount).toFixed(2) }}</td>
         </tr>
       </tbody>
     </table>
@@ -94,6 +91,26 @@ const toWords = new ToWords({
 
 const isRefund = computed(() => {
   return payment.value && payment.value.type === 'advance refund';
+});
+
+const receiptTitle = computed(() => {
+  if (!payment.value) return 'Receipt';
+  const type = payment.value.type;
+  if (type === 'cancelled booking') return 'Cancellation Receipt';
+  if (type === 'out' || type === 'advance refund') return 'Refund Receipt';
+  if (type === 'penalty') return 'Penalty Receipt';
+  if (type === 'due dismiss') return 'Dismissal Receipt';
+  return 'Payment Receipt';
+});
+
+const amountLabel = computed(() => {
+  if (!payment.value) return 'Amount';
+  const type = payment.value.type;
+  if (type === 'cancelled booking') return 'Cancelled Amount';
+  if (type === 'out' || type === 'advance refund') return 'Refund Amount';
+  if (type === 'penalty') return 'Penalty Amount';
+  if (type === 'due dismiss') return 'Dismissed Amount';
+  return 'Paid Amount';
 });
 
 // Calculate total advanced and remaining based on current total_due.

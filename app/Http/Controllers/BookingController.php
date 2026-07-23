@@ -239,7 +239,7 @@ class BookingController extends Controller
         
         $dueAmount = $netAmount - $paidAmount;
         
-        $status = 'pending';
+        $status = 'confirmed';
 
         // 4. Save to DB with Transaction and Pessimistic Locking
         $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $totalAmount, $discount, $netAmount, $paidAmount, $dueAmount, $status, $ground, $appliedRules) {
@@ -334,51 +334,39 @@ class BookingController extends Controller
                                         $validated['status'] === 'cancelled' && 
                                         $lockedBooking->status !== 'cancelled';
 
-            // 1. Handle Cancellation and Refund
+            // 1. Handle Cancellation
             if ($statusChangedToCancelled) {
                 if (in_array($lockedBooking->status, ['running', 'completed'])) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'status' => ['Cannot cancel a booking that is already running or completed to preserve accounting integrity.']
                     ]);
                 }
-
-                $refundAmount = $validated['refund_amount'] ?? 0;
-                
-                if ($refundAmount > $lockedBooking->paid_amount) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'refund_amount' => ['Refund cannot exceed the previously paid amount of ' . $lockedBooking->paid_amount]
-                    ]);
-                }
-
-                // If cancelled, the client no longer owes the due amount for this booking
-                if ($lockedBooking->due_amount > 0) {
-                    $client->decrement('total_due', $lockedBooking->due_amount);
-                }
                 
                 $lockedBooking->update([
-                    'status' => 'cancelled',
-                    'due_amount' => 0, // Due is forgiven on cancellation
-                    'refund_amount' => $refundAmount
+                    'status' => 'cancelled'
                 ]);
                 
-                // Record the cash going OUT of the drawer for accurate accounting
-                if ($refundAmount > 0) {
-                    \App\Models\Payment::create([
-                        'client_id' => $lockedBooking->client_id,
-                        'amount' => $refundAmount,
-                        'type' => 'out',
-                        'payment_method' => 'cash',
-                        'transaction_id' => 'BKG-REF-' . $lockedBooking->id
-                    ]);
-                }
+                $netAmountToReverse = $lockedBooking->net_amount ?? ($lockedBooking->paid_amount + $lockedBooking->due_amount);
+                $client->decrement('total_due', $netAmountToReverse);
                 
                 $invoice = \App\Models\Invoice::where('booking_id', $lockedBooking->id)->first();
                 if ($invoice) {
                     $invoice->update([
-                        'due' => 0,
-                        'paid' => $lockedBooking->paid_amount - $refundAmount
+                        'grand_total' => 0,
+                        'due' => -$invoice->paid
                     ]);
                 }
+
+                \App\Models\Payment::create([
+                    'client_id' => $lockedBooking->client_id,
+                    'invoice_id' => $invoice ? $invoice->id : null,
+                    'amount' => $netAmountToReverse,
+                    'type' => 'cancelled booking',
+                    'payment_method' => 'system',
+                    'transaction_id' => 'BKG-CANCEL-' . $lockedBooking->id,
+                    'note' => 'Booking #' . $lockedBooking->id . ' cancelled. Billed amount reversed.',
+                    'user_id' => auth()->id()
+                ]);
                 
                 // Update slots status to blocked/cancelled so they free up
                 $lockedBooking->slots()->update(['status' => 'blocked']);

@@ -46,7 +46,7 @@
                 <button class="btn btn-sm btn-primary me-2" @click="goToEditPage(tx)" title="Edit">
                   <i class="bi bi-pencil"></i> Edit
                 </button>
-                <button class="btn btn-sm btn-info" @click="viewInvoice(tx)" title="View">
+                <button class="btn btn-sm btn-info" @click="viewReceipt(tx)" title="View">
                   <i class="bi bi-eye"></i> View
                 </button>
               </td>
@@ -125,12 +125,8 @@ const goToEditPage = (tx) => {
   router.push(`/clients/transactions/due-paid/${tx.id}/edit`);
 };
 
-const viewInvoice = (tx) => {
-  if (tx.invoice_id) {
-    router.push(`/print-invoice/${tx.invoice_id}`);
-  } else {
-    Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Payment Receipt viewing will be available soon', showConfirmButton: false, timer: 3000 });
-  }
+const viewReceipt = (tx) => {
+  window.open(`/payments/${tx.id}/print`, '_blank');
 };
 </script>
 

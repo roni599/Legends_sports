@@ -26,7 +26,6 @@
           <div class="col-md-3">
             <select class="form-select custom-input" v-model="statusFilter" @change="fetchBookings()">
               <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="running">Running</option>
               <option value="completed">Completed</option>
@@ -163,7 +162,6 @@
               <h6 class="fw-bold text-primary mb-3"><i class="bi bi-arrow-repeat me-2"></i>Change Status</h6>
               <select class="form-select" v-model="newStatus" @change="submitStatusChange">
                 <option :value="selectedBooking?.status" disabled>Current: {{ selectedBooking?.status.toUpperCase() }}</option>
-                <option value="pending" v-if="selectedBooking?.status === 'confirmed'">Pending</option>
                 <option value="confirmed" v-if="selectedBooking?.status === 'pending'">Confirmed</option>
                 <option value="running" v-if="['confirmed', 'pending'].includes(selectedBooking?.status)">Running</option>
                 <option value="completed" v-if="selectedBooking?.status === 'running'">Completed</option>
@@ -172,15 +170,10 @@
               </select>
             </div>
 
-            <!-- Cancellation & Refund Logic -->
+            <!-- Cancellation Logic -->
             <div class="mb-3 p-3 bg-danger bg-opacity-10 rounded border border-danger border-opacity-25" v-if="newStatus === 'cancelled'">
               <h6 class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancellation Warning</h6>
-              <p class="text-sm text-danger mb-2">Cancelling this booking will forgive the remaining due amount of ৳{{ selectedBooking?.due_amount }}.</p>
-              
-              <div v-if="selectedBooking?.paid_amount > 0">
-                <label class="form-label text-danger fw-bold">Refund Amount (Max: ৳{{ selectedBooking?.paid_amount }})</label>
-                <input type="number" class="form-control border-danger" v-model="refundAmount" min="0" :max="selectedBooking?.paid_amount">
-              </div>
+              <p class="text-sm text-danger mb-2">Are you sure you want to cancel this booking?</p>
             </div>
             
             <button v-if="newStatus === 'cancelled'" class="btn btn-danger w-100 fw-bold" @click="submitCancellation" :disabled="isSubmitting">
@@ -332,26 +325,19 @@ const handleCancel = async (booking) => {
       : 'Booking is already cancelled.', 'warning');
     return;
   }
-  const { value: refundAmount } = await Swal.fire({
+  const result = await Swal.fire({
     title: 'Cancel Booking?',
-    html: `<p>Booking #${booking.id} for ${booking.client?.name}</p>
-           <p class="text-danger">This will forgive the due of ৳${booking.due_amount}</p>
-           ${booking.paid_amount > 0 ? `<label class="form-label fw-bold">Refund Amount (Max: ৳${booking.paid_amount})</label>
-           <input id="swal-refund" type="number" class="form-control" min="0" max="${booking.paid_amount}" value="0">` : ''}`,
+    html: `<p>Booking #${booking.id} for ${booking.client?.name}</p>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc3545',
     cancelButtonColor: '#6c757d',
     confirmButtonText: 'Confirm Cancel',
-    preConfirm: () => {
-      const input = document.getElementById('swal-refund');
-      return input ? parseFloat(input.value) || 0 : 0;
-    }
   });
-  if (refundAmount === undefined) return;
+  if (!result.isConfirmed) return;
 
   try {
-    await axios.put(`/api/bookings/${booking.id}`, { status: 'cancelled', refund_amount: refundAmount });
+    await axios.put(`/api/bookings/${booking.id}`, { status: 'cancelled' });
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Booking cancelled!', showConfirmButton: false, timer: 3000 });
     fetchBookings(pagination.value.current_page);
   } catch (error) {
@@ -448,8 +434,7 @@ const submitCancellation = async () => {
   isSubmitting.value = true;
   try {
     await axios.put(`/api/bookings/${selectedBooking.value.id}`, {
-      status: 'cancelled',
-      refund_amount: refundAmount.value || 0
+      status: 'cancelled'
     });
     closeModal();
     fetchBookings(pagination.value.current_page);

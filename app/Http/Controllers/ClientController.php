@@ -126,12 +126,12 @@ class ClientController extends Controller
     {
         $client->loadCount('bookings');
 
-        $bookings = \App\Models\Booking::with(['ground:id,name', 'slots'])
+        $bookings = \App\Models\Booking::with(['ground:id,name', 'slots', 'invoice:id,booking_id,invoice_number'])
             ->where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $payments = \App\Models\Payment::with(['user', 'invoice'])
+        $payments = \App\Models\Payment::with(['user', 'invoice.booking.ground', 'invoice.booking.slots'])
             ->where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -159,6 +159,55 @@ class ClientController extends Controller
             }
             $totalPaid += floatval($bkg->paid_amount);
             $totalDiscount += floatval($bkg->discount);
+        }
+
+        $items = collect();
+        foreach ($bookings as $bkg) {
+            $display_status = $bkg->status;
+            if ($bkg->status === 'cancelled') {
+                $display_status = 'confirmed';
+            }
+            $items->push([
+                'date' => $bkg->created_at,
+                'model' => $bkg,
+                'amount' => floatval($bkg->net_amount ?? $bkg->total_amount),
+                'is_addition' => true,
+                'display_status' => strtoupper($display_status)
+            ]);
+        }
+
+        foreach ($payments as $payment) {
+            $is_addition = false;
+            if (in_array($payment->type, ['due pay', 'advance refund', 'out', 'penalty'])) {
+                $is_addition = true;
+            }
+            
+            $display_status = 'CONFIRMED';
+            if (in_array($payment->type, ['cancelled booking', 'out', 'penalty', 'advance refund', 'due dismiss'])) {
+                $display_status = 'CANCELLED';
+            } elseif ($payment->invoice?->booking?->status === 'completed') {
+                $display_status = 'COMPLETED';
+            }
+
+            $items->push([
+                'date' => $payment->created_at,
+                'model' => $payment,
+                'amount' => floatval($payment->amount),
+                'is_addition' => $is_addition,
+                'display_status' => $display_status
+            ]);
+        }
+
+        $items = $items->sortBy('date');
+        $runningDue = 0;
+        foreach ($items as $item) {
+            if ($item['is_addition']) {
+                $runningDue += $item['amount'];
+            } else {
+                $runningDue -= $item['amount'];
+            }
+            $item['model']->running_due = $runningDue;
+            $item['model']->display_status = $item['display_status'];
         }
 
         return response()->json([
@@ -324,7 +373,7 @@ class ClientController extends Controller
                         'type' => 'due receive',
                         'payment_method' => $validated['payment_method'],
                         'transaction_id' => 'INV-PAY-' . $lockedClient->id . '-' . uniqid(),
-                        'created_at' => $validated['date'],
+                        'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                         'updated_at' => $validated['date']
                     ]);
                 }
@@ -343,7 +392,7 @@ class ClientController extends Controller
                     'type' => 'due receive',
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => 'INV-PAY-' . $lockedClient->id . '-' . uniqid(),
-                    'created_at' => $validated['date'],
+                    'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                     'updated_at' => $validated['date']
                 ]);
             }
@@ -390,11 +439,13 @@ class ClientController extends Controller
             'invoices.*.type' => 'required|string',
             'invoices.*.original_id' => 'required|integer',
             'invoices.*.amount' => 'required|numeric|min:0.01',
-            'amount' => 'required|numeric|min:0.01'
+            'amount' => 'required|numeric|min:0.01',
+            'penalty' => 'nullable|numeric|min:0'
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated) {
             $lockedClient = Client::lockForUpdate()->find($client->id);
+            $remainingPenalty = $validated['penalty'] ?? 0;
 
             foreach ($validated['invoices'] as $inv) {
                 $invoiceIdForPayment = $inv['original_id'] ?? $inv['id'];
@@ -417,23 +468,47 @@ class ClientController extends Controller
                             }
                         }
                         
-                        // Create individual payment record for precise tracing
-                        \App\Models\Payment::create([
-                            'client_id' => $lockedClient->id,
-                            'invoice_id' => $invoice->id,
-                            'user_id' => auth()->id(),
-                            'amount' => $refundAmount,
-                            'type' => 'out', // money leaving the drawer
-                            'payment_method' => $validated['payment_method'],
-                            'transaction_id' => 'REFUND-INV-' . $invoice->id,
-                            'note' => 'Refund for invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : '')
-                        ]);
+                        $thisPenalty = min($refundAmount, $remainingPenalty);
+                        $thisOut = $refundAmount - $thisPenalty;
+                        $remainingPenalty -= $thisPenalty;
+
+                        if ($thisOut > 0) {
+                            \App\Models\Payment::create([
+                                'client_id' => $lockedClient->id,
+                                'invoice_id' => $invoice->id,
+                                'user_id' => auth()->id(),
+                                'amount' => $thisOut,
+                                'type' => 'out', // money leaving the drawer
+                                'payment_method' => $validated['payment_method'],
+                                'transaction_id' => 'REFUND-INV-' . $invoice->id,
+                                'note' => 'Refund for invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : ''),
+                                'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
+                                'updated_at' => $validated['date']
+                            ]);
+                        }
+
+                        if ($thisPenalty > 0) {
+                            \App\Models\Payment::create([
+                                'client_id' => $lockedClient->id,
+                                'invoice_id' => $invoice->id,
+                                'user_id' => auth()->id(),
+                                'amount' => $thisPenalty,
+                                'type' => 'penalty', // penalty kept by admin
+                                'payment_method' => 'system', // Penalty doesn't really use a payment gateway
+                                'transaction_id' => 'PENALTY-INV-' . $invoice->id,
+                                'note' => 'Penalty charged on invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : ''),
+                                'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
+                                'updated_at' => $validated['date']
+                            ]);
+                        }
+                        
+                        $lockedClient->increment('total_due', $refundAmount);
                     }
                 }
             }
         });
 
-        return response()->json(['message' => 'Refund processed successfully']);
+        return response()->json(['message' => 'Refund and penalty processed successfully']);
     }
 
     public function payOut(Request $request, Client $client)
@@ -460,7 +535,7 @@ class ClientController extends Controller
                 'type' => 'due pay',
                 'payment_method' => $validated['payment_method'],
                 'transaction_id' => 'PAY-OUT-' . $lockedClient->id . '-' . uniqid(),
-                'created_at' => $validated['date'],
+                'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                 'updated_at' => $validated['date']
             ]);
 
@@ -519,7 +594,7 @@ class ClientController extends Controller
                     'type' => 'advance receive',
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => 'ADV-REC-' . $lockedClient->id . '-' . uniqid(),
-                    'created_at' => $validated['date'],
+                    'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                     'updated_at' => $validated['date']
                 ]);
                 $createdPaymentIds[] = $payment->id;
@@ -551,7 +626,7 @@ class ClientController extends Controller
                                 'payment_method' => $validated['payment_method'],
                                 'transaction_id' => 'ADV-REF-INV-' . $invoice->id,
                                 'note' => 'Refund for advance invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : ''),
-                                'created_at' => $validated['date'],
+                                'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                                 'updated_at' => $validated['date']
                             ]);
                             $createdPaymentIds[] = $payment->id;
@@ -572,7 +647,7 @@ class ClientController extends Controller
                     'type' => 'advance refund',
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => 'ADV-REF-' . $lockedClient->id . '-' . uniqid(),
-                    'created_at' => $validated['date'],
+                    'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                     'updated_at' => $validated['date']
                 ]);
                 $createdPaymentIds[] = $payment->id;
@@ -640,7 +715,7 @@ class ClientController extends Controller
                         'type' => 'due dismiss',
                         'payment_method' => 'dismiss',
                         'transaction_id' => 'DISMISS-' . $lockedClient->id . '-' . uniqid(),
-                        'created_at' => $validated['date'],
+                        'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                         'updated_at' => $validated['date']
                     ]);
                 }
@@ -657,7 +732,7 @@ class ClientController extends Controller
                     'type' => 'due dismiss',
                     'payment_method' => 'dismiss',
                     'transaction_id' => 'DISMISS-' . $lockedClient->id . '-' . uniqid(),
-                    'created_at' => $validated['date'],
+                    'created_at' => $validated['date'] === date('Y-m-d') ? now() : \Carbon\Carbon::parse($validated['date'])->endOfDay(),
                     'updated_at' => $validated['date']
                 ]);
             }

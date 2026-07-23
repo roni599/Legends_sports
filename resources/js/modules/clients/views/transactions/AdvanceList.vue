@@ -48,7 +48,7 @@
                 <button class="btn btn-sm btn-primary me-2" @click="goToEditPage(tx)" title="Edit">
                   <i class="bi bi-pencil"></i> Edit
                 </button>
-                <button class="btn btn-sm btn-info" @click="viewInvoice(tx)" title="View">
+                <button class="btn btn-sm btn-info" @click="viewReceipt(tx)" title="View">
                   <i class="bi bi-eye"></i> View
                 </button>
               </td>
@@ -127,13 +127,10 @@ const goToEditPage = (tx) => {
   router.push(`/clients/transactions/advance/${tx.id}/edit`);
 };
 
-const viewInvoice = (tx) => {
-  if (tx.invoice_id) {
-    router.push(`/print-invoice/${tx.invoice_id}`);
-  } else {
-    router.push(`/payments/${tx.id}/print`);
-  }
+const viewReceipt = (tx) => {
+  window.open(`/payments/${tx.id}/print`, '_blank');
 };
+
 </script>
 
 <style scoped>

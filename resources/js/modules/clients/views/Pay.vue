@@ -84,12 +84,24 @@
             </div>
           </div>
           
+
+
           <div class="row g-0 mb-3 align-items-center">
-            <label class="col-sm-3 col-form-label text-light text-end pe-2">Paying Amount</label>
+            <label class="col-sm-3 col-form-label text-light text-end pe-2">Penalty / Charge</label>
             <div class="col-sm-9">
               <div class="input-group">
                 <span class="input-group-text bg-dark text-light border-secondary">৳</span>
-                <input type="text" class="form-control modal-input fw-bold text-success fs-5" v-model="paymentForm.amount" @input="handleGlobalAmountInput">
+                <input type="number" class="form-control modal-input fw-bold text-danger fs-5" v-model.number="paymentForm.penalty" min="0" @input="onPenaltyInput">
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-0 mb-3 align-items-center">
+            <label class="col-sm-3 col-form-label text-light fw-bold text-end pe-2">Actual Refund</label>
+            <div class="col-sm-9">
+              <div class="input-group">
+                <span class="input-group-text bg-dark text-light border-secondary">৳</span>
+                <input type="number" class="form-control modal-input fw-bold text-primary fs-5" v-model.number="paymentForm.actual_refund" min="0" @input="onActualRefundInput">
               </div>
             </div>
           </div>
@@ -123,7 +135,7 @@
           <div class="row">
             <div class="col-sm-3"></div>
             <div class="col-sm-9">
-              <button class="btn btn-primary w-100 py-2 fw-bold" @click="submitPayment" :disabled="submitting || paymentForm.amount <= 0">
+              <button class="btn btn-primary w-100 py-2 fw-bold" @click="submitPayment" :disabled="submitting || paymentForm.amount <= 0 || paymentForm.penalty > paymentForm.amount">
                 <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="bi bi-check-circle me-1"></i> Confirm Refund
               </button>
@@ -154,6 +166,8 @@ const selectAll = ref(false);
 
 const paymentForm = ref({
   amount: 0,
+  penalty: 0,
+  actual_refund: 0,
   note: '',
   date: new Date().toISOString().split('T')[0],
   payment_method: 'cash'
@@ -205,7 +219,7 @@ const toggleAll = () => {
       inv.paying_amount = 0;
     });
   }
-  paymentForm.value.amount = invoices.value.reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
+  updateAmountFromCheckboxes();
 };
 
 const toggleRow = (invoice) => {
@@ -214,7 +228,12 @@ const toggleRow = (invoice) => {
   } else {
     invoice.paying_amount = 0;
   }
+  updateAmountFromCheckboxes();
+};
+
+const updateAmountFromCheckboxes = () => {
   paymentForm.value.amount = invoices.value.reduce((sum, inv) => sum + (Number(inv.paying_amount) || 0), 0);
+  paymentForm.value.actual_refund = Math.max(0, paymentForm.value.amount - (Number(paymentForm.value.penalty) || 0));
 };
 
 watch(() => invoices.value.map(i => i.selected), () => {
@@ -222,14 +241,27 @@ watch(() => invoices.value.map(i => i.selected), () => {
   selectAll.value = allSelected;
 });
 
-const handleGlobalAmountInput = () => {
-  let remainingAmount = Number(paymentForm.value.amount) || 0;
-  if (remainingAmount > grandTotalDue.value) {
-    remainingAmount = grandTotalDue.value;
-    paymentForm.value.amount = remainingAmount;
+const onPenaltyInput = () => {
+  // If they type penalty, automatically assume they are settling the full due
+  paymentForm.value.amount = grandTotalDue.value;
+  paymentForm.value.actual_refund = Math.max(0, grandTotalDue.value - (Number(paymentForm.value.penalty) || 0));
+  distributeAmountToInvoices();
+};
+
+const onActualRefundInput = () => {
+  paymentForm.value.amount = (Number(paymentForm.value.penalty) || 0) + (Number(paymentForm.value.actual_refund) || 0);
+  
+  if (paymentForm.value.amount > grandTotalDue.value) {
+    paymentForm.value.amount = grandTotalDue.value;
+    paymentForm.value.actual_refund = Math.max(0, grandTotalDue.value - (Number(paymentForm.value.penalty) || 0));
     Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `Maximum refundable amount is ${grandTotalDue.value}`, showConfirmButton: false, timer: 3000 });
   }
+  distributeAmountToInvoices();
+};
 
+const distributeAmountToInvoices = () => {
+  let remainingAmount = Number(paymentForm.value.amount) || 0;
+  
   invoices.value.forEach(inv => {
     if (remainingAmount >= Number(inv.due)) {
       inv.paying_amount = Number(inv.due);
@@ -279,6 +311,7 @@ const submitPayment = async () => {
       note: paymentForm.value.note,
       date: paymentForm.value.date,
       amount: paymentForm.value.amount,
+      penalty: paymentForm.value.penalty || 0,
       invoices: selectedInvoices.length > 0 ? selectedInvoices : null
     });
     

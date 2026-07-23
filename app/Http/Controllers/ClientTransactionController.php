@@ -11,7 +11,7 @@ class ClientTransactionController extends Controller
     public function index(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|string|in:due_receive,due_paid,advance,dismiss'
+            'type' => 'required|string|in:due_receive,due_paid,advance,due_dismiss'
         ]);
 
         $query = Payment::with(['client:id,name', 'user:id,name', 'invoice:id,invoice_number'])
@@ -20,10 +20,10 @@ class ClientTransactionController extends Controller
         if ($validated['type'] === 'due_receive') {
             $query->where('type', 'due receive');
         } elseif ($validated['type'] === 'due_paid') {
-            $query->where('type', 'due pay');
+            $query->whereIn('type', ['due pay', 'out']);
         } elseif ($validated['type'] === 'advance') {
             $query->whereIn('type', ['advance receive', 'advance refund']);
-        } elseif ($validated['type'] === 'dismiss') {
+        } elseif ($validated['type'] === 'due_dismiss') {
             $query->where('type', 'due dismiss');
         }
 
