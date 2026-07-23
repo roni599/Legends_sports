@@ -219,7 +219,7 @@ const submitPayment = async () => {
   const selectedInvoices = invoices.value
     .filter(inv => inv.selected && Number(inv.paying_amount) > 0)
     .map(inv => ({
-      id: inv.id,
+      id: inv.original_id || inv.id,
       amount: Number(inv.paying_amount)
     }));
 

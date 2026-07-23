@@ -133,6 +133,7 @@ class ClientController extends Controller
 
         $payments = \App\Models\Payment::with(['user', 'invoice.booking.ground', 'invoice.booking.slots'])
             ->where('client_id', $client->id)
+            ->where('amount', '>', 0)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -198,7 +199,7 @@ class ClientController extends Controller
             ]);
         }
 
-        $items = $items->sortBy('date');
+        $items = $items->sortBy('date')->values();
         $runningDue = 0;
         foreach ($items as $item) {
             if ($item['is_addition']) {

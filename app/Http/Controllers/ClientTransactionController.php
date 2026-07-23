@@ -15,6 +15,7 @@ class ClientTransactionController extends Controller
         ]);
 
         $query = Payment::with(['client:id,name', 'user:id,name', 'invoice:id,invoice_number'])
+            ->where('amount', '>', 0)
             ->latest();
 
         if ($validated['type'] === 'due_receive') {
