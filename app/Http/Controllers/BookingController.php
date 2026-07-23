@@ -273,9 +273,22 @@ class BookingController extends Controller
                 'status' => 'booked'
             ]);
 
+            $invoice = \App\Models\Invoice::create([
+                'booking_id' => $booking->id,
+                'client_id' => $validated['client_id'],
+                'type' => 'booking',
+                'invoice_number' => 'INV-BKG-' . uniqid(),
+                'subtotal' => $totalAmount,
+                'discount' => $discount,
+                'grand_total' => $netAmount,
+                'paid' => $paidAmount,
+                'due' => $dueAmount,
+            ]);
+
             if ($paidAmount > 0) {
                 \App\Models\Payment::create([
                     'client_id' => $validated['client_id'],
+                    'invoice_id' => $invoice->id,
                     'amount' => $paidAmount,
                     'type' => 'book pay',
                     'payment_method' => 'cash',
@@ -359,6 +372,14 @@ class BookingController extends Controller
                     ]);
                 }
                 
+                $invoice = \App\Models\Invoice::where('booking_id', $lockedBooking->id)->first();
+                if ($invoice) {
+                    $invoice->update([
+                        'due' => 0,
+                        'paid' => $lockedBooking->paid_amount - $refundAmount
+                    ]);
+                }
+                
                 // Update slots status to blocked/cancelled so they free up
                 $lockedBooking->slots()->update(['status' => 'blocked']);
                 return;
@@ -394,6 +415,14 @@ class BookingController extends Controller
                     'payment_method' => 'cash',
                     'transaction_id' => 'BKG-UPD-' . $lockedBooking->id . '-' . uniqid()
                 ]);
+
+                $invoice = \App\Models\Invoice::where('booking_id', $lockedBooking->id)->first();
+                if ($invoice) {
+                    $invoice->update([
+                        'paid' => $lockedBooking->paid_amount,
+                        'due' => $lockedBooking->due_amount
+                    ]);
+                }
             }
 
             // 3. Handle General Status Update

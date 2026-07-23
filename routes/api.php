@@ -75,10 +75,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view_clients')->get('clients/{client}/ledger', [App\Http\Controllers\ClientController::class, 'ledger']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/receive-payment', [App\Http\Controllers\ClientController::class, 'receiveDuePayment']);
     Route::middleware('permission:view_clients')->get('clients/{client}/due-invoices', [App\Http\Controllers\ClientController::class, 'getDueInvoices']);
+    Route::middleware('permission:view_clients')->get('clients/{client}/advance-invoices', [App\Http\Controllers\ClientController::class, 'getAdvanceInvoices']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/receive-invoices', [App\Http\Controllers\ClientController::class, 'receiveDueInvoices']);
+    Route::middleware('permission:view_clients')->get('clients/{client}/refundable-invoices', [App\Http\Controllers\ClientController::class, 'getRefundableInvoices']);
+    Route::middleware('permission:edit_clients')->post('clients/{client}/refund-invoices', [App\Http\Controllers\ClientController::class, 'refundInvoices']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/pay-out', [App\Http\Controllers\ClientController::class, 'payOut']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/advance', [App\Http\Controllers\ClientController::class, 'processAdvance']);
     Route::middleware('permission:edit_clients')->post('clients/{client}/dismiss-invoices', [App\Http\Controllers\ClientController::class, 'dismissDueInvoices']);
+    Route::middleware('permission:view_clients')->get('client-transactions', [App\Http\Controllers\ClientTransactionController::class, 'index']);
+    Route::middleware('permission:view_clients')->get('client-transactions/{payment}', [App\Http\Controllers\ClientTransactionController::class, 'show']);
+    Route::middleware('permission:edit_clients')->put('client-transactions/{payment}', [App\Http\Controllers\ClientTransactionController::class, 'update']);
     Route::middleware('permission:view_clients')->get('payments/{payment}', [App\Http\Controllers\PaymentController::class, 'show']);
     Route::middleware('permission:edit_clients')->patch('clients/{client}/toggle-status', [App\Http\Controllers\ClientController::class, 'toggleStatus']);
     Route::middleware('permission:edit_clients')->put('clients/{client}', [App\Http\Controllers\ClientController::class, 'update']);

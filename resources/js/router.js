@@ -62,6 +62,54 @@ const routes = [
         meta: { permission: 'edit_clients' }
       },
       {
+        path: 'clients/transactions/due-receive',
+        name: 'DueReceiveList',
+        component: () => import('./modules/clients/views/transactions/DueReceiveList.vue'),
+        meta: { permission: 'view_clients' }
+      },
+      {
+        path: 'clients/transactions/due-receive/:id/edit',
+        name: 'EditDueReceive',
+        component: () => import('./modules/clients/views/transactions/EditDueReceive.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
+        path: 'clients/transactions/due-paid',
+        name: 'DuePaidList',
+        component: () => import('./modules/clients/views/transactions/DuePaidList.vue'),
+        meta: { permission: 'view_clients' }
+      },
+      {
+        path: 'clients/transactions/due-paid/:id/edit',
+        name: 'EditDuePaid',
+        component: () => import('./modules/clients/views/transactions/EditDuePaid.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
+        path: 'clients/transactions/advance',
+        name: 'AdvanceList',
+        component: () => import('./modules/clients/views/transactions/AdvanceList.vue'),
+        meta: { permission: 'view_clients' }
+      },
+      {
+        path: 'clients/transactions/advance/:id/edit',
+        name: 'EditAdvance',
+        component: () => import('./modules/clients/views/transactions/EditAdvance.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
+        path: 'clients/transactions/dismiss',
+        name: 'DismissList',
+        component: () => import('./modules/clients/views/transactions/DismissList.vue'),
+        meta: { permission: 'view_clients' }
+      },
+      {
+        path: 'clients/transactions/dismiss/:id/edit',
+        name: 'EditDismiss',
+        component: () => import('./modules/clients/views/transactions/EditDismiss.vue'),
+        meta: { permission: 'edit_clients' }
+      },
+      {
         path: 'clients/:id/ledger',
         name: 'ClientLedger',
         component: () => import('./modules/clients/views/Ledger.vue'),

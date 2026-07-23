@@ -17,7 +17,14 @@ class ClientController extends Controller
         $query = Client::with([
             'bookings.ground:id,name',
             'bookings.slots:id,booking_id,date,start_time,end_time,price'
-        ])->latest();
+        ])
+        ->withSum(['payments as total_advance_received' => function($query) {
+            $query->where('type', 'advance receive');
+        }], 'amount')
+        ->withSum(['payments as total_refund_paid' => function($query) {
+            $query->where('type', 'advance refund');
+        }], 'amount')
+        ->latest();
         
         if ($request->has('search')) {
             $search = $request->search;
@@ -55,8 +62,9 @@ class ClientController extends Controller
             $cli->play_time = $totalPlays;
             $cli->total_billed = $totalBilled;
             $cli->total_paid = $totalPaid;
-            $cli->due_amount = $cli->total_due > 0 ? $cli->total_due : 0;
-            $cli->advance_amount = $cli->total_due < 0 ? abs($cli->total_due) : 0;
+            $cli->due_amount = $cli->total_due;
+            $cli->advance_amount = $cli->total_advance_received ?? 0;
+            $cli->refund_amount = $cli->total_refund_paid ?? 0;
             
             return $cli;
         };
@@ -123,15 +131,18 @@ class ClientController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $payments = \App\Models\Payment::where('client_id', $client->id)
+        $payments = \App\Models\Payment::with(['user', 'invoice'])
+            ->where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
         $totalBookedAmount = 0;
         $totalPlayAmount = 0;
         $totalPaid = 0;
-        $totalDue = $client->total_due > 0 ? $client->total_due : 0;
-        $totalAdvance = $client->total_due < 0 ? abs($client->total_due) : 0;
+        $totalDiscount = 0;
+        $totalDue = $client->total_due;
+        $totalAdvance = \App\Models\Payment::where('client_id', $client->id)->where('type', 'advance receive')->sum('amount');
+        $totalRefund = \App\Models\Payment::where('client_id', $client->id)->where('type', 'advance refund')->sum('amount');
         $totalBooked = 0;
         $totalPlays = 0;
         $totalBookings = $bookings->count();
@@ -147,6 +158,7 @@ class ClientController extends Controller
                 }
             }
             $totalPaid += floatval($bkg->paid_amount);
+            $totalDiscount += floatval($bkg->discount);
         }
 
         return response()->json([
@@ -162,6 +174,8 @@ class ClientController extends Controller
                 'total_advance' => $totalAdvance,
                 'total_booked_amount' => $totalBookedAmount,
                 'total_play_amount' => $totalPlayAmount,
+                'total_discount' => $totalDiscount,
+                'total_refund' => $totalRefund,
             ]
         ]);
     }
@@ -190,6 +204,7 @@ class ClientController extends Controller
             // Create Payment record
             \App\Models\Payment::create([
                 'client_id' => $lockedClient->id,
+                'user_id' => auth()->id(),
                 'amount' => $validated['amount'],
                 'type' => 'in',
                 'payment_method' => $validated['payment_method'],
@@ -207,6 +222,7 @@ class ClientController extends Controller
     public function getDueInvoices(Client $client)
     {
         $invoices = \App\Models\Invoice::where('client_id', $client->id)
+            ->where('type', '!=', 'advance')
             ->where('due', '>', 0)
             ->get()->map(function ($inv) {
                 return [
@@ -214,29 +230,39 @@ class ClientController extends Controller
                     'invoice_number' => $inv->invoice_number,
                     'grand_total' => $inv->grand_total,
                     'due' => $inv->due,
-                    'type' => 'invoice',
+                    'type' => $inv->type,
                     'date' => $inv->created_at ? $inv->created_at->format('jS F') : null,
                     'original_id' => $inv->id
-                ];
-            });
-            
-        $bookings = \App\Models\Booking::where('client_id', $client->id)
-            ->where('due_amount', '>', 0)
-            ->get()->map(function ($bkg) {
-                return [
-                    'id' => 'BKG-' . $bkg->id,
-                    'invoice_number' => 'BKG-' . $bkg->id,
-                    'grand_total' => $bkg->net_amount,
-                    'due' => $bkg->due_amount,
-                    'type' => 'booking',
-                    'date' => $bkg->created_at ? $bkg->created_at->format('jS F') : null,
-                    'original_id' => $bkg->id
                 ];
             });
 
         return response()->json([
             'client' => $client,
-            'invoices' => collect($invoices)->merge($bookings)->values()
+            'invoices' => $invoices
+        ]);
+    }
+
+    public function getAdvanceInvoices(Client $client)
+    {
+        $invoices = \App\Models\Invoice::where('client_id', $client->id)
+            ->where('type', 'advance')
+            ->where('due', '<', 0)
+            ->get()->map(function ($inv) {
+                return [
+                    'id' => 'INV-' . $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'grand_total' => $inv->grand_total,
+                    'paid' => $inv->paid,
+                    'due' => abs($inv->due), // return positive for display
+                    'type' => $inv->type,
+                    'date' => $inv->created_at ? $inv->created_at->format('jS F') : null,
+                    'original_id' => $inv->id
+                ];
+            });
+
+        return response()->json([
+            'client' => $client,
+            'invoices' => $invoices
         ]);
     }
 
@@ -264,53 +290,150 @@ class ClientController extends Controller
 
             if (!empty($validated['invoices'])) {
                 foreach ($validated['invoices'] as $invoiceData) {
-                    if (isset($invoiceData['type']) && $invoiceData['type'] === 'booking') {
-                        $booking = \App\Models\Booking::lockForUpdate()->find($invoiceData['original_id']);
-                        if (!$booking || $booking->client_id !== $lockedClient->id) continue;
-                        
-                        $payAmount = min($invoiceData['amount'], $booking->due_amount);
-                        if ($payAmount <= 0) continue;
+                    $invoiceIdForPayment = $invoiceData['original_id'] ?? $invoiceData['id'];
+                    $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceIdForPayment);
+                    if (!$invoice || $invoice->client_id !== $lockedClient->id) continue;
+                    
+                    $payAmount = min($invoiceData['amount'], $invoice->due);
+                    if ($payAmount <= 0) continue;
 
-                        $booking->paid_amount += $payAmount;
-                        $booking->due_amount -= $payAmount;
-                        $booking->save();
-                    } else {
-                        $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceData['original_id'] ?? $invoiceData['id']);
-                        if (!$invoice || $invoice->client_id !== $lockedClient->id) continue;
-                        
-                        $payAmount = min($invoiceData['amount'], $invoice->due);
-                        if ($payAmount <= 0) continue;
+                    $invoice->paid += $payAmount;
+                    $invoice->due -= $payAmount;
+                    $invoice->save();
 
-                        $invoice->paid += $payAmount;
-                        $invoice->due -= $payAmount;
-                        $invoice->save();
+                    if ($invoice->type === 'booking' && $invoice->booking_id) {
+                        $booking = \App\Models\Booking::find($invoice->booking_id);
+                        if ($booking) {
+                            $booking->paid_amount += $payAmount;
+                            $booking->due_amount -= $payAmount;
+                            if ($booking->due_amount == 0 && $booking->status === 'pending') {
+                                $booking->status = 'confirmed';
+                            }
+                            $booking->save();
+                        }
                     }
 
                     $totalPaid += $payAmount;
+
+                    // Create individual payment per invoice/booking
+                    \App\Models\Payment::create([
+                        'client_id' => $lockedClient->id,
+                        'user_id' => auth()->id(),
+                        'invoice_id' => $invoiceIdForPayment,
+                        'amount' => $payAmount,
+                        'type' => 'due receive',
+                        'payment_method' => $validated['payment_method'],
+                        'transaction_id' => 'INV-PAY-' . $lockedClient->id . '-' . uniqid(),
+                        'created_at' => $validated['date'],
+                        'updated_at' => $validated['date']
+                    ]);
                 }
             }
 
             // If user inputted an amount greater than the sum of selected invoices (or no invoices were selected),
             // use the manually entered amount as the total paid.
             $finalPaymentAmount = max($totalPaid, $validated['amount']);
+            $excessAmount = $finalPaymentAmount - $totalPaid;
 
-            if ($finalPaymentAmount > 0) {
+            if ($excessAmount > 0) {
                 \App\Models\Payment::create([
                     'client_id' => $lockedClient->id,
-                    'amount' => $finalPaymentAmount,
+                    'user_id' => auth()->id(),
+                    'amount' => $excessAmount,
                     'type' => 'due receive',
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => 'INV-PAY-' . $lockedClient->id . '-' . uniqid(),
                     'created_at' => $validated['date'],
                     'updated_at' => $validated['date']
                 ]);
-
+            }
+            if ($finalPaymentAmount > 0) {
                 $lockedClient->total_due -= $finalPaymentAmount;
                 $lockedClient->save();
             }
         });
 
         return response()->json(['message' => 'Payment received successfully.', 'client' => $client->fresh()]);
+    }
+
+    public function getRefundableInvoices(Client $client)
+    {
+        $invoices = \App\Models\Invoice::where('client_id', $client->id)
+            ->where('due', '<', 0)
+            ->where('type', '!=', 'advance')
+            ->get()->map(function ($inv) {
+                return [
+                    'id' => 'INV-' . $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'grand_total' => $inv->grand_total,
+                    'paid_amount' => $inv->paid,
+                    'due' => abs($inv->due), // return positive for frontend compatibility
+                    'type' => $inv->type,
+                    'date' => $inv->created_at ? $inv->created_at->format('jS F') : null,
+                    'original_id' => $inv->id
+                ];
+            });
+
+        return response()->json([
+            'invoices' => $invoices
+        ]);
+    }
+
+    public function refundInvoices(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:cash,bkash,bank,card',
+            'note' => 'nullable|string',
+            'date' => 'required|date',
+            'invoices' => 'required|array',
+            'invoices.*.id' => 'required',
+            'invoices.*.type' => 'required|string',
+            'invoices.*.original_id' => 'required|integer',
+            'invoices.*.amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01'
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated) {
+            $lockedClient = Client::lockForUpdate()->find($client->id);
+
+            foreach ($validated['invoices'] as $inv) {
+                $invoiceIdForPayment = $inv['original_id'] ?? $inv['id'];
+                $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceIdForPayment);
+                if (!$invoice || $invoice->client_id !== $lockedClient->id) continue;
+
+                if ($invoice->due < 0) {
+                    $maxRefundable = abs($invoice->due);
+                    $refundAmount = min($inv['amount'], $maxRefundable);
+                    
+                    if ($refundAmount > 0) {
+                        $invoice->paid -= $refundAmount;
+                        $invoice->due += $refundAmount;
+                        $invoice->save();
+
+                        if ($invoice->type === 'booking' && $invoice->booking_id) {
+                            $bkg = \App\Models\Booking::find($invoice->booking_id);
+                            if ($bkg) {
+                                $bkg->increment('refund_amount', $refundAmount);
+                            }
+                        }
+                        
+                        // Create individual payment record for precise tracing
+                        \App\Models\Payment::create([
+                            'client_id' => $lockedClient->id,
+                            'invoice_id' => $invoice->id,
+                            'user_id' => auth()->id(),
+                            'amount' => $refundAmount,
+                            'type' => 'out', // money leaving the drawer
+                            'payment_method' => $validated['payment_method'],
+                            'transaction_id' => 'REFUND-INV-' . $invoice->id,
+                            'note' => 'Refund for invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : '')
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return response()->json(['message' => 'Refund processed successfully']);
     }
 
     public function payOut(Request $request, Client $client)
@@ -332,6 +455,7 @@ class ClientController extends Controller
 
             \App\Models\Payment::create([
                 'client_id' => $lockedClient->id,
+                'user_id' => auth()->id(),
                 'amount' => $validated['amount'],
                 'type' => 'due pay',
                 'payment_method' => $validated['payment_method'],
@@ -355,23 +479,42 @@ class ClientController extends Controller
             'refund_advance' => 'nullable|numeric|min:0',
             'payment_method' => 'required|string|in:cash,bkash,bank,card',
             'note' => 'nullable|string',
-            'date' => 'required|date'
+            'date' => 'required|date',
+            'invoices' => 'nullable|array',
+            'invoices.*.id' => 'required_with:invoices',
+            'invoices.*.type' => 'nullable|string',
+            'invoices.*.original_id' => 'nullable|integer',
+            'invoices.*.amount' => 'required_with:invoices|numeric|min:0.01'
         ]);
         
-        $currentAdvance = $client->total_due < 0 ? abs($client->total_due) : 0;
+        $currentAdvance = abs(\App\Models\Invoice::where('client_id', $client->id)->where('type', 'advance')->where('due', '<', 0)->sum('due'));
         
-        if (!empty($validated['refund_advance']) && $validated['refund_advance'] > $currentAdvance) {
+        $refundAmountRequested = $validated['refund_advance'] ?? 0;
+        if ($refundAmountRequested > $currentAdvance) {
             return response()->json(['message' => 'Refund amount cannot exceed the total advance amount.'], 422);
         }
 
         $createdPaymentIds = [];
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated, &$createdPaymentIds) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $validated, &$createdPaymentIds, $refundAmountRequested) {
             $lockedClient = Client::lockForUpdate()->find($client->id);
 
             if (!empty($validated['receiving_advance']) && $validated['receiving_advance'] > 0) {
+                $invoice = \App\Models\Invoice::create([
+                    'client_id' => $lockedClient->id,
+                    'type' => 'advance',
+                    'invoice_number' => 'INV-ADV-' . uniqid(),
+                    'subtotal' => 0,
+                    'discount' => 0,
+                    'grand_total' => 0,
+                    'paid' => $validated['receiving_advance'],
+                    'due' => -$validated['receiving_advance']
+                ]);
+
                 $payment = \App\Models\Payment::create([
                     'client_id' => $lockedClient->id,
+                    'invoice_id' => $invoice->id,
+                    'user_id' => auth()->id(),
                     'amount' => $validated['receiving_advance'],
                     'type' => 'advance receive',
                     'payment_method' => $validated['payment_method'],
@@ -380,14 +523,52 @@ class ClientController extends Controller
                     'updated_at' => $validated['date']
                 ]);
                 $createdPaymentIds[] = $payment->id;
-                // Receiving advance reduces total due (increases advance balance)
-                $lockedClient->total_due -= $validated['receiving_advance'];
+                // We no longer reduce total_due for advances as it is tracked independently via invoice dues
             }
 
-            if (!empty($validated['refund_advance']) && $validated['refund_advance'] > 0) {
+            $totalRefundedFromInvoices = 0;
+            if (!empty($validated['invoices'])) {
+                foreach ($validated['invoices'] as $invData) {
+                    $invoiceIdForPayment = $invData['original_id'] ?? $invData['id'];
+                    $invoice = \App\Models\Invoice::lockForUpdate()->find($invoiceIdForPayment);
+                    if (!$invoice || $invoice->client_id !== $lockedClient->id || $invoice->type !== 'advance') continue;
+                    
+                    if ($invoice->due < 0) {
+                        $maxRefundable = abs($invoice->due);
+                        $refundAmt = min($invData['amount'], $maxRefundable);
+                        
+                        if ($refundAmt > 0) {
+                            $invoice->paid -= $refundAmt;
+                            $invoice->due += $refundAmt;
+                            $invoice->save();
+
+                            $payment = \App\Models\Payment::create([
+                                'client_id' => $lockedClient->id,
+                                'invoice_id' => $invoice->id,
+                                'user_id' => auth()->id(),
+                                'amount' => $refundAmt,
+                                'type' => 'advance refund',
+                                'payment_method' => $validated['payment_method'],
+                                'transaction_id' => 'ADV-REF-INV-' . $invoice->id,
+                                'note' => 'Refund for advance invoice ' . $invoice->invoice_number . ($validated['note'] ? ' | ' . $validated['note'] : ''),
+                                'created_at' => $validated['date'],
+                                'updated_at' => $validated['date']
+                            ]);
+                            $createdPaymentIds[] = $payment->id;
+                            $totalRefundedFromInvoices += $refundAmt;
+                        }
+                    }
+                }
+            }
+
+            $finalRefundAmount = max($totalRefundedFromInvoices, $refundAmountRequested);
+            $excessRefundAmount = $finalRefundAmount - $totalRefundedFromInvoices;
+
+            if ($excessRefundAmount > 0) {
                 $payment = \App\Models\Payment::create([
                     'client_id' => $lockedClient->id,
-                    'amount' => $validated['refund_advance'],
+                    'user_id' => auth()->id(),
+                    'amount' => $excessRefundAmount,
                     'type' => 'advance refund',
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => 'ADV-REF-' . $lockedClient->id . '-' . uniqid(),
@@ -395,10 +576,8 @@ class ClientController extends Controller
                     'updated_at' => $validated['date']
                 ]);
                 $createdPaymentIds[] = $payment->id;
-                // Refunding advance increases total due (decreases advance balance)
-                $lockedClient->total_due += $validated['refund_advance'];
             }
-            
+            // We no longer increase total_due for advance refunds as it is tracked independently
             $lockedClient->save();
         });
 
@@ -440,23 +619,49 @@ class ClientController extends Controller
                     $invoice->due -= $dismissAmount;
                     $invoice->save();
 
+                    if ($invoice->type === 'booking' && $invoice->booking_id) {
+                        $booking = \App\Models\Booking::find($invoice->booking_id);
+                        if ($booking) {
+                            $booking->due_amount -= $dismissAmount;
+                            if ($booking->due_amount == 0 && $booking->status === 'pending') {
+                                $booking->status = 'confirmed';
+                            }
+                            $booking->save();
+                        }
+                    }
+
                     $totalDismissed += $dismissAmount;
+
+                    \App\Models\Payment::create([
+                        'client_id' => $lockedClient->id,
+                        'user_id' => auth()->id(),
+                        'invoice_id' => $invoice->id,
+                        'amount' => $dismissAmount,
+                        'type' => 'due dismiss',
+                        'payment_method' => 'dismiss',
+                        'transaction_id' => 'DISMISS-' . $lockedClient->id . '-' . uniqid(),
+                        'created_at' => $validated['date'],
+                        'updated_at' => $validated['date']
+                    ]);
                 }
             }
 
             $finalAmount = max($totalDismissed, $validated['amount']);
+            $excessAmount = $finalAmount - $totalDismissed;
 
-            if ($finalAmount > 0) {
+            if ($excessAmount > 0) {
                 \App\Models\Payment::create([
                     'client_id' => $lockedClient->id,
-                    'amount' => $finalAmount,
+                    'user_id' => auth()->id(),
+                    'amount' => $excessAmount,
                     'type' => 'due dismiss',
                     'payment_method' => 'dismiss',
                     'transaction_id' => 'DISMISS-' . $lockedClient->id . '-' . uniqid(),
                     'created_at' => $validated['date'],
                     'updated_at' => $validated['date']
                 ]);
-
+            }
+            if ($finalAmount > 0) {
                 $lockedClient->total_due -= $finalAmount;
                 $lockedClient->save();
             }

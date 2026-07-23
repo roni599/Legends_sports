@@ -28,21 +28,20 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Base Booking -->
+        <!-- Booking Details & Pricing Rules Merged -->
         <tr>
           <td>
             <div class="fw-bold">{{ booking.ground.name }}</div>
             <small v-for="slot in booking.slots" :key="slot.id" class="d-block">
               Date: {{ slot.date }} | Time: {{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}
             </small>
+            <div v-if="appliedRules.length > 0" class="mt-1">
+              <small v-for="(rule, index) in appliedRules" :key="'rule'+index" class="text-primary d-block">
+                + {{ rule.name }}
+              </small>
+            </div>
           </td>
-          <td class="text-end align-middle">৳ {{ baseAmount }}</td>
-        </tr>
-        
-        <!-- Pricing Rules -->
-        <tr v-for="(rule, index) in appliedRules" :key="index">
-          <td class="text-primary"><small>+ {{ rule.name }} ({{ rule.type }})</small></td>
-          <td class="text-end align-middle">৳ {{ rule.modifier }}</td>
+          <td class="text-end align-middle">৳ {{ booking.total_amount }}</td>
         </tr>
         
         <!-- Totals -->
@@ -59,7 +58,7 @@
           <td class="text-end fw-bold fs-6">৳ {{ booking.total_amount - booking.discount }}</td>
         </tr>
         <tr>
-          <td class="text-end fw-bold">Paid Advance</td>
+          <td class="text-end fw-bold">Paid</td>
           <td class="text-end text-success">৳ {{ booking.paid_amount }}</td>
         </tr>
         <tr>

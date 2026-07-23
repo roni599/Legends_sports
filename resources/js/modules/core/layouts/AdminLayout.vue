@@ -18,7 +18,11 @@
           </a>
           <div class="collapse" id="clientMenu" data-bs-parent="#sidebarAccordion">
             <div class="ps-3 pe-2 py-1 border-start border-secondary ms-3 mb-2 mt-1">
-              <router-link to="/clients" class="nav-item-custom text-sm py-1" active-class="active">Client List</router-link>
+              <router-link to="/clients" class="nav-item-custom text-sm py-1 mb-1" active-class="active">Client List</router-link>
+              <router-link to="/clients/transactions/due-receive" class="nav-item-custom text-sm py-1 mb-1" active-class="active">Due Receive List</router-link>
+              <router-link to="/clients/transactions/due-paid" class="nav-item-custom text-sm py-1 mb-1" active-class="active">Due Paid List</router-link>
+              <router-link to="/clients/transactions/advance" class="nav-item-custom text-sm py-1 mb-1" active-class="active">Advance List</router-link>
+              <router-link to="/clients/transactions/dismiss" class="nav-item-custom text-sm py-1" active-class="active">Dismiss List</router-link>
             </div>
           </div>
         </div>

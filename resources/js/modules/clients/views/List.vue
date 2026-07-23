@@ -20,19 +20,20 @@
               <th>Email</th>
               <th>Address</th>
               <th class="text-center">Play Time</th>
+              <th class="text-end">Advance (৳)</th>
+              <th class="text-end">Refund (৳)</th>
               <th class="text-end">Total Billed</th>
               <th class="text-end">Total Paid</th>
               <th class="text-end">Due (৳)</th>
-              <th class="text-end">Advance (৳)</th>
               <th class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="clientStore.loading">
-              <td colspan="11" class="text-center py-4">Loading clients...</td>
+              <td colspan="12" class="text-center py-4">Loading clients...</td>
             </tr>
             <tr v-else-if="clientStore.clients.length === 0">
-              <td colspan="11" class="text-center py-4">No clients found</td>
+              <td colspan="12" class="text-center py-4">No clients found</td>
             </tr>
             <tr v-else v-for="(client, index) in clientStore.clients" :key="client.id">
               <td class="text-white">{{ (clientStore.page - 1) * 10 + index + 1 }}</td>
@@ -51,10 +52,11 @@
               <td class="small text-light">{{ client.email || '-' }}</td>
               <td class="small text-light">{{ client.address || '-' }}</td>
               <td class="text-center text-white">{{ client.play_time || 0 }}</td>
+              <td class="text-end text-white">{{ client.advance_amount || 0 }}</td>
+              <td class="text-end text-white">{{ client.refund_amount || 0 }}</td>
               <td class="text-end text-white">{{ client.total_billed || 0 }}</td>
               <td class="text-end text-white">{{ client.total_paid || 0 }}</td>
-              <td class="text-end" :class="{'text-danger fw-bold': client.due_amount > 0}">{{ client.due_amount || 0 }}</td>
-              <td class="text-end" :class="{'text-success fw-bold': client.advance_amount > 0}">{{ client.advance_amount > 0 ? '-' + client.advance_amount : 0 }}</td>
+              <td class="text-end text-white">{{ client.due_amount || 0 }}</td>
               <td class="text-end">
                 <span v-if="client.status === 'deactive'" class="badge bg-danger me-1">Deactive</span>
                 <div class="dropdown" @click.stop>
